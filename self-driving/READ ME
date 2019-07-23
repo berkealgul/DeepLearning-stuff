@@ -5,5 +5,6 @@ Kodu çalıştırmadan önce:
 lakin eğer eğitilmiş model ile devam etmek isterseniz load_gen() fonksiyonu ile başlatınız ama generate_random_gen() fonksiyonununu 
 çalıştırmamanız lazım
 3 - parkur oluşturmak isterseniz mapMain dosyasını çalıştırın programı kapattıktan sonra otomatik 'mapData.json' dosyasına kaydedecektir
-4 - oluşturulan parkur ana similasyonda mapData.json üzerinden yükler eğer öyle bir dosya yok ise hata verir
+4 - oluşturulan parkur ana similasyonda mapData.json üzerinden yüklenir eğer öyle bir dosya yok ise hata verir
 5 - bazı yerlerde hata olabilir
+6 - her nesil sonu ve programdan çıkmadan önce en iyi araba kaydedilir
