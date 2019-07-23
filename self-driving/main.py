@@ -59,7 +59,7 @@ def handle_pygame_events():
 def setup_generation():
     global generationNum, activeCars, timeRemain
     # yeni jenerasyona geçmeden arabalara not verilir
-    #update_scores()
+    update_scores()
 
     activeCars = ga.create_new_generation(oldGeneration=crashedCars)
     crashedCars.clear()
@@ -83,8 +83,6 @@ def update():
     update_generation()
     detect_crashes()
     check_checkpoint()
-    update_scores()
-
 
 # yardımcı fonksiyolar
 
@@ -110,7 +108,7 @@ def detect_crashes():
 
 
 def update_scores():
-    for car in activeCars:
+    for car in crashedCars:
         car.update_score(len(checkpoints))
 
 
@@ -142,6 +140,14 @@ def save_exit():
     bestCar = pick_best()
     jsonH.save(bestCar.brain, 'bestcar')
     sys.exit()
+
+
+def save_best():
+    bestInd = 0
+    for i in range(len(crashedCars)):
+        if crashedCars[bestInd].score < crashedCars[i].score:
+            bestInd = i
+    jsonH.save(crashedCars[bestInd].brain, 'bestcar')
 
 
 def pick_best():
@@ -198,14 +204,12 @@ while 1:
 
     # yeni jenerasyona geçilmelimi ona bakılır
     if len(activeCars) == 0:
+        save_best()
         setup_generation()
     if timeRemain < 0:
         kill_gen()
 
     if renderOn is True:
         render()
-
-    best = pick_best()
-    print(best.score)
 
     py.display.set_caption("Nesil: " + str(generationNum) + '-' + str(len(activeCars)) + '   ' + str(timeRemain))

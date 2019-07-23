@@ -131,10 +131,10 @@ def right_click():
 
 
 # ana döngü
-#Map = create_map_from_json()
+Map = create_map_from_json()
 while 1:
     pygame_event_handle()
     render()
     pygame.display.set_caption('sol/sağ tık: duvar ekle/çıkar, '
                                'orta tuş: doğma noktasını ayarla, c: zincir modu, tab: işlem iptali   Zincir mod: '
-                               + str(chainMode))
+                               + str(chainMode)+ ' a tuşu ile kontrol noktası ekler (silinmezler ve sırayla koyunuz)')

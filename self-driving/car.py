@@ -15,7 +15,7 @@ class Car:
     maxAccelerationPower = 30
     spawnpoint = 0, 0
 
-    def __init__(self, angle=90, brain=None):
+    def __init__(self, angle=0, brain=None):
         self.loc = Car.spawnpoint
         self.dir = math.cos(math.radians(angle)), math.sin(math.radians(angle))
         self.velocity = 0
