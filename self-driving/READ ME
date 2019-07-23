@@ -1,0 +1,9 @@
+Kodu çalıştırmadan önce:
+
+1 - pygame kütüphanesine ihtiyacınız vardır
+2 - eğer modeli 0 dan başlatmak isterseniz ana döngünün üstünde generate_random_gen() fonksiyonunu çalıştırmanız lazım
+lakin eğer eğitilmiş model ile devam etmek isterseniz load_gen() fonksiyonu ile başlatınız ama generate_random_gen() fonksiyonununu 
+çalıştırmamanız lazım
+3 - parkur oluşturmak isterseniz mapMain dosyasını çalıştırın programı kapattıktan sonra otomatik 'mapData.json' dosyasına kaydedecektir
+4 - oluşturulan parkur ana similasyonda mapData.json üzerinden yükler eğer öyle bir dosya yok ise hata verir
+5 - bazı yerlerde hata olabilir
