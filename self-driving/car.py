@@ -7,22 +7,22 @@ import random
 
 
 class Car:
-    FOV = 90
-    maxSpeed = 200
-    dimensions = (30, 20)
-    maxLidarRange = 150
-    maxSteeringAngle = 15
-    maxAccelerationPower = 50
+    FOV = 360  # eğer bunu değiştirir isen tekrardan lidarı döndürmen gerekir
+    maxSpeed = 100
+    dimensions = (20, 15)
+    maxLidarRange = 100
+    maxSteeringAngle = 40
+    maxAccelerationPower = 30
     spawnpoint = 0, 0
 
     def __init__(self, angle=90, brain=None):
         self.loc = Car.spawnpoint
         self.dir = math.cos(math.radians(angle)), math.sin(math.radians(angle))
         self.velocity = 0
-        self.color = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
-
+        #self.color = random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)
+        self.color = random.randint(0,255),random.randint(0,255),random.randint(0,255)
         lidarLoc = self.loc
-        self.lidar = RaySource(lidarLoc, Car.FOV, angle, 5)
+        self.lidar = RaySource(lidarLoc, Car.FOV, angle, 8)
 
         self.geometry = None
         self.construct_and_alling_geometry(angle)
@@ -30,12 +30,15 @@ class Car:
         # input = 5lidarIşını, hız, 2yönDeğeri
         # output = sol dönüş, sağ dönüş, gaz, fren, gaz/fren gücü
         if brain is None:
-            self.brain = NeuralNetwork(8, 6, 5, 1)
+            self.brain = NeuralNetwork(9, 4, 5, 1)
         else:
             self.brain = brain
 
         # doğal seçilim yaparken aracın skoru('score') lazım olacak
+        self.checkpointPassed = 0
         self.score = 0
+        self.fitness = 0
+        self.totalWent = 0
 
     # sürüş mekaniklerini sağlayan fonksiyonlar
     def move(self, acceleration, dt):
@@ -49,6 +52,8 @@ class Car:
 
         locX += dx
         locY += dy
+
+        self.totalWent += math.fabs(dx) + math.fabs(dy)
 
         self.loc = locX, locY
         self.lidar.set_loc(self.loc)
@@ -72,7 +77,7 @@ class Car:
         self.rotate_geometry(angle)
 
     def update_velocity(self, acceleration, dt):
-        if self.velocity < Car.maxSpeed:
+        if -Car.maxSpeed / 3 < self.velocity < Car.maxSpeed:
             self.velocity += acceleration * dt
             # aracın azami hızı aşması engellenir
             if self.velocity > Car.maxSpeed:
@@ -109,53 +114,56 @@ class Car:
 
         return False
 
-    def render(self, screen):
-        py.draw.polygon(screen, self.color, self.geometry)
+    def render(self, screen, color=None):
+        if color is not None:
+            c = color
+        else:
+            c = self.color
+        py.draw.polygon(screen, c, self.geometry)
+        #self.lidar.render(screen)
+
+    def update_score(self, totalCheckpoints):
+        self.score += self.checkpointPassed
+        # son 3 checkointe geldi ise 2 katı puan alır
+        if self.checkpointPassed == totalCheckpoints - 2:
+            self.score += self.checkpointPassed
 
     # otonom sürüş fonksiyonları
     def drive(self, boundaries, dt):
         output = self.think(boundaries)
         # output =
-        # [ sağa kır    ] --\ hangisi büyükse
-        # [ sola kır    ] --/ uygulanır
-        # [ kırma açısı ] --> 'maxSteeringAngle' ile çarpılır mutlak değeri alınır
-        # [ gaz         ] --\ hangisi büyükse
-        # [ fren        ] --/ uygulanır
-        # [ ivme gücü   ] --> 'maxAccelerationPower' ile çarpılır mutlak değeri alınır
+        # [ sağa kır                    ] --\ hangisi büyükse
+        # [ sola kır                    ] --/ uygulanır
+        # [ gaz        ]
+        # [fren]
 
         des = output.values
 
-        a = math.fabs(des[5][0]) * Car.maxAccelerationPower
-        sa = math.fabs(des[2][0]) * Car.maxSteeringAngle
-
+        sa = Car.maxSteeringAngle
         # dönme uygulanır
         if des[0][0] < des[1][0]:
-            sa *= -1  # sola kırılması gerekirse
+           sa *= -1  # sola kırılması gerekirse
         self.rotate(sa * dt)
 
-        # gaz/fren uygulanır
-        if des[3][0] > des[4][0]:
-            a *= -1  # fren yapılması gerekirse
+        a = Car.maxAccelerationPower
+        if des[2][0] < des[3][0]:
+            a *= -1
         self.move(a, dt)
 
     def think(self, boundaries):
-        input = Matrix(8, 1)
+        input = Matrix(9, 1)
         lidarData = self.get_lidar_data(boundaries)
         # input =
         # [ lidar 1                      ]
         # [ lidar 2                      ]
         # [ lidar 3                      ]
         #   ...
-        # [ lidar 5                      ]
-        # [ self.dir X                   ]
-        # [ self. dir Y                  ]
+        # [ lidar 8                      ]
         # [ self.velocity / max velocity ]
         for i in range(len(lidarData)):
             input.values[i][0] = lidarData[i]
 
-        input.values[5][0] = self.dir[0]
-        input.values[6][0] = self.dir[1]
-        input.values[7][0] = self.velocity / Car.maxSpeed
+        input.values[8][0] = self.velocity / Car.maxSpeed
 
         output = self.brain.feedforward(input)
         return output
@@ -166,7 +174,7 @@ class Car:
         R = Car.maxLidarRange
         for r in self.lidar.rays:
             try:
-                x = r.distance(r.intersection)
+                x = r.distance(r.intersection)  # intersection None ise hata verir
             except:
                 x = R
             if x > R:
@@ -174,6 +182,7 @@ class Car:
             # veriler 0-1 arasında olması tercih edilir
             data.append(x / R)
         return data
+
 
     # geometrisini güncelleyen fonksiyonlar
     def construct_and_alling_geometry(self, angle):

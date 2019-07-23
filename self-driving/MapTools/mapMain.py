@@ -1,4 +1,5 @@
-from MapTools.Map import Map
+from MapTools.parkour import Parkour
+from MapTools.parkour import Wall
 import pygame
 import sys
 import json
@@ -14,7 +15,7 @@ secondClickPos = None
 
 chainMode = False
 
-Map = Map(w, h)
+Map = Parkour(w, h)
 screen = pygame.display.set_mode((w, h))
 
 
@@ -36,8 +37,15 @@ def create_map_from_json():
         w = data['width']
         h = data['height']
         sp = data['spawnpoint']
-        map = Map(w ,h, sp)
-        map.walls = data['walls']
+        map = Parkour(w, h, sp)
+
+        map.walls = []
+        for w in data['walls']:
+            loc = w[0][0], w[0][1]
+            loc2 = w[1][0], w[1][1]
+            map.walls.append(Wall(loc, loc2))
+            map.checkpoints = data['checkpoints']
+
         return map
 
 
@@ -71,6 +79,8 @@ def handle_keyboard_input():
     elif keys[pygame.K_TAB]:
         firstClickPos = None
         secondClickPos = None
+    elif keys[pygame.K_a]:
+        Map.add_checkpoint(pygame.mouse.get_pos())
 
 
 # duvar ekle çıkarma
@@ -121,6 +131,7 @@ def right_click():
 
 
 # ana döngü
+#Map = create_map_from_json()
 while 1:
     pygame_event_handle()
     render()

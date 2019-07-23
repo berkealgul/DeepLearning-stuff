@@ -201,7 +201,4 @@ class NeuralNetwork:
                 for i in range(len(row)):
                     # ağırlıklara eriştik
                     if rnd.random() < mutationRate:
-                        treshold = rnd.random()
-                        row[i] += rnd.uniform(-treshold, treshold)
-                        if not -1 < row[i] < 1:
-                            row[i] = rnd.uniform(-1, 1)
+                        row[i] = rnd.uniform(-1, 1)
