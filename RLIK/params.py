@@ -1,6 +1,7 @@
 import math
 
 
+# Object Colors during rendering
 class Colors:
     Joint        = (227, 42, 0)
     Connector    = (44, 153, 5)
@@ -8,6 +9,7 @@ class Colors:
     End_Effector = (252, 232, 3)
 
 
+# Object dimensions during rendering
 class Dimensions:
     connector_w    = 8
     joint_r        = 10
@@ -15,6 +17,7 @@ class Dimensions:
     goal_w         = 15
 
 
+# Hyperparameters for simulation
 class TrainConfig:
     steps_each_ep = 150
     max_episodes  = 50000
