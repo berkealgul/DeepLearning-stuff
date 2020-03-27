@@ -3,6 +3,7 @@ import random
 import torch
 import math
 import copy
+import numpy as np
 from arm import Arm
 from params import *
 from brain import Brain
@@ -40,20 +41,20 @@ class Agent:
         goal_p = self.goal.center
         angles = self.arm.joint_angles
 
-        state = list()
+        state = np.zeros(shape=(7,1), dtype=np.float32)
         for i in range(len(angles)):
-            state.append(angles[i])
+            state[i] = angles[i]
 
         px = self.pivot[0]
         py = self.pivot[1]
 
-        state.append(end_eff_p[0] - px)
-        state.append(end_eff_p[1] - py)
-        state.append(goal_p[0] - px)
-        state.append(goal_p[1] - py)
+        state[3] = (end_eff_p[0] - px)
+        state[4] = (end_eff_p[1] - py)
+        state[5] = (goal_p[0] - px)
+        state[6] = (goal_p[1] - py)
 
         state = torch.FloatTensor(state)
-
+        print(state)
         return state
 
     def get_reward(self):
