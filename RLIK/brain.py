@@ -81,6 +81,13 @@ class Brain():
         torch.save({'state_dict': self.actor.state_dict()},os.path.join(file, "a"))
         torch.save({'state_dict': self.target_actor.state_dict()},os.path.join(file, "at.pt"))
 
+    def load(self, file="saves"):
+        print("-------------LOADING----------------")
+        self.critic.load_state_dict(torch.load(os.path.join(file, "c.pt"))['state_dict'])
+        self.target_critic.load_state_dict(torch.load(os.path.join(file, "ct.pt"))['state_dict'])
+        self.actor.load_state_dict(torch.load(os.path.join(file, "a"))['state_dict'])
+        self.target_actor.load_state_dict(torch.load(os.path.join(file, "at.pt"))['state_dict'])
+
 
 class ReplayBuffer():
     def __init__(self):

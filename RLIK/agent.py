@@ -64,7 +64,9 @@ class Agent:
         end_eff = self.arm.axis_pivots[-1]
         goal = self.goal.center
 
-        done = self.goal.collidepoint(end_eff)
+        efr = py.Rect(0, 0, 15, 15)
+        efr.center = end_eff
+        done = self.goal.colliderect(efr)
 
         if self.arm.is_collusion_free():
             dx = goal[0] - end_eff[0]
@@ -73,14 +75,14 @@ class Agent:
 
             dA = 0
             for i in range(len(self.starting_angles)):
-                a = math.radians(self.starting_angles[i] - self.arm.joint_angles[i])
+                a = math.radians(self.starting_angles[i] -self.arm.joint_angles[i])
                 dA += (a * a)
             dA = math.sqrt(dA)
 
             r = (-a * dist) - (b * dA)
 
             if done is True:
-                r += k
+                r += k*k
         else:
             r = -k
 

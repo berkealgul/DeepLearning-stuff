@@ -20,8 +20,8 @@ class Dimensions:
 # Hyperparameters for simulation
 class TrainConfig:
     steps_each_ep = 210
-    max_episodes  = 60000
-    lr            = 0.00000001
+    max_episodes  = 10000
+    lr            = 0.000001
     gamma          = 0.99
     inputs        = 7
     outputs       = 3
