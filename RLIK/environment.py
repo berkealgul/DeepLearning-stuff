@@ -15,19 +15,29 @@ class Environment:
 
     def begin(self):
         for i in range(tc.max_episodes):
-            self.update_log()
+            self.update_log(str(i+1))
             for j in range(tc.steps_each_ep):
                 self.clock.tick(30)
-                py.event.get()
+
+                for e in py.event.get():
+                    if e.type == py.QUIT:
+                        sys.exit()
+
                 self.render()
                 done = self.agent.step(self.dt)
                 if done is True:
                     break
             self.agent.brain.train()
             self.agent.reset()
+            self.agent.brain.save()
 
-    def update_log(self):
-        print("x")
+    def update_log(self, ep):
+        print("----------------------------------------")
+        print("")
+        print("        EPISODE: " + ep + "           ")
+        print("        BERKE ALGÜL                    ")
+        print("")
+        print("----------------------------------------")
 
     def render(self):
         self.screen.fill((0,0,0))

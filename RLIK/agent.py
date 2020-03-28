@@ -41,26 +41,26 @@ class Agent:
         goal_p = self.goal.center
         angles = self.arm.joint_angles
 
-        state = np.zeros(shape=(7,1), dtype=np.float32)
+        state = list()
+        state.append([])
         for i in range(len(angles)):
-            state[i] = angles[i]
+            state[0].append(angles[i])
 
         px = self.pivot[0]
         py = self.pivot[1]
 
-        state[3] = (end_eff_p[0] - px)
-        state[4] = (end_eff_p[1] - py)
-        state[5] = (goal_p[0] - px)
-        state[6] = (goal_p[1] - py)
+        state[0].append(end_eff_p[0] - px)
+        state[0].append(end_eff_p[1] - py)
+        state[0].append(goal_p[0] - px)
+        state[0].append(goal_p[1] - py)
 
         state = torch.FloatTensor(state)
-        print(state)
         return state
 
     def get_reward(self):
-        a = TrainConfig.a
-        b = TrainConfig.b
-        k = TrainConfig.k
+        a = 1 / 70
+        k = 20
+        b = 10 / (2 * math.pi)
         end_eff = self.arm.axis_pivots[-1]
         goal = self.goal.center
 

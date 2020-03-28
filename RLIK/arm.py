@@ -50,7 +50,7 @@ class Arm:
 
     def __update_axis_angles(self, action_vector):
         for i in range(self.joint_count):
-            self.joint_angles[i] += action_vector[i]
+            self.joint_angles[i] += action_vector[0][i]
 
     def __update_axis_pivots(self):
         for i in range(self.joint_count):
