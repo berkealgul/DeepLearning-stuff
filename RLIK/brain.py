@@ -122,10 +122,10 @@ class ActorNetwork(nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, state):
-        a = self.bn1(self.fc1(state))
-        a = F.relu(a)
-        a = self.bn2(self.fc2(a))
-        a = F.relu(a)
+        a = F.relu(self.fc1(state))
+        a = self.bn1(a)
+        a = F.relu(self.fc2(a))
+        a = self.bn2(a)
         a = self.out(a)
         return a
 
@@ -143,9 +143,9 @@ class CriticNetwork(nn.Module):
 
     def forward(self, state, action):
         q = torch.cat([action, state], 1)
-        q = self.bn1(self.fc1(q))
-        q = F.relu(q)
-        q = self.bn2(self.fc2(q))
-        q = F.relu(q)
+        q = F.relu(self.fc1(q))
+        q = self.bn1(q)
+        q = F.relu(self.fc2(q))
+        q = self.bn2(q)
         q = self.out(q)
         return q
