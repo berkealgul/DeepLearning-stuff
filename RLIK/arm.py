@@ -64,27 +64,13 @@ class Arm:
 
     # SPECIAL FUNCTIONS BELOW
     def is_collusion_free(self):
-        for j in range(-2, 0):
-            ef = self.axis_pivots[j]
-
-            x0 = ef[0]
-            y0 = ef[1]
-
-            for i in range(3):
-                p1 = self.axis_pivots[i]
-                p2 = self.axis_pivots[i+1]
-
-                x1 = p1[0]
-                x2 = p2[0]
-                y1 = p1[1]
-                y2 = p2[1]
-
-                if min((x1, x2)) < x0 < max((x1, x2)) and min((y1, y2)) < y0 < max((y1, y2)):
-                    dx = x2-x1
-                    dy = y2-y1
-                    dist = abs(dy*x0-dx*y0 + x2*y1-y2*x1) / math.sqrt(dy*dy + dx*dx)
-
-                    # TODO: Azami uzaklık parametre haline getirilebilir
-                    if dist <= 20:
-                        return False
+        for p_axis in self.axis_pivots:
+            for axis in self.axis_pivots:
+                if p_axis == axis:
+                    continue
+                dx = p_axis[0] - axis[0]
+                dy = p_axis[1] - axis[1]
+                dist = math.sqrt(dx*dx+dy*dy)
+                if dist <= 20:
+                    return False
         return True

@@ -75,17 +75,16 @@ class Agent:
 
             dA = 0
             for i in range(len(self.starting_angles)):
-                a = math.radians(self.starting_angles[i] -self.arm.joint_angles[i])
-                dA += (a * a)
+                an = math.radians(self.starting_angles[i] -self.arm.joint_angles[i])
+                dA += (an * an)
             dA = math.sqrt(dA)
 
             r = (-a * dist) - (b * dA)
 
             if done is True:
-                r += k*k
+                r += 100
         else:
             r = -k
-
         return r, done
 
     def reset(self):
