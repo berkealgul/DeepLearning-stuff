@@ -63,15 +63,15 @@ class Agent:
         b = 10 / (2 * math.pi)
         end_eff = self.arm.axis_pivots[-1]
         goal = self.goal.center
-
-        efr = py.Rect(0, 0, 15, 15)
-        efr.center = end_eff
-        done = self.goal.colliderect(efr)
+        done = False
 
         if self.arm.is_collusion_free():
             dx = goal[0] - end_eff[0]
             dy = goal[1] - end_eff[1]
             dist = math.sqrt(dx*dx+dy*dy)
+
+            if dist < 10:
+                done = True
 
             dA = 0
             for i in range(len(self.starting_angles)):
