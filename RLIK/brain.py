@@ -22,8 +22,8 @@ class Brain():
         self.actor.train()
         return action
 
-    def train(self):
-        for i in range(tg.steps_each_ep):
+    def train(self, steps):
+        for i in range(steps):
             s, a, r, sn = self.replayBuffer.get_sample(i)
 
             self.target_actor.eval()
@@ -45,10 +45,13 @@ class Brain():
 
             self.actor.optimizer.zero_grad()
             qVal = self.critic.forward(s, a)
-            actor_loss = self.critic.forward(s, a)
-            actor_loss = torch.mean(actor_loss)
+            #TODO: BU uygun olmayan aktivasyon fonksiyonu(büyük ihtimal) yüzünden
+            # Vanishing gradient problemi yaşıyorsun. Çözümü araştır
+            actor_loss = torch.mean(qVal*a)
             actor_loss.backward(retain_graph=True)
             self.actor.optimizer.step()
+
+            print(" a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
 
         self.update_target_networks()
 
@@ -90,7 +93,7 @@ class Brain():
 
 
 class ReplayBuffer():
-    def __init__(self):
+    def __init__(self, memorySize=tg.steps_each_ep, stateInput=0):
         self.states    = []
         self.next_states = []
         self.rewards   = []
@@ -109,6 +112,13 @@ class ReplayBuffer():
         r = self.rewards[ids]
         return s, a, r, sn
 
+    def get_all_buffer(self):
+        s = torch.stack(self.states, dim=0)
+        a = torch.stack(self.actions, dim=0)
+        sn = torch.stack(self.next_states, dim=0)
+        r = torch.tensor(self.rewards, dtype=torch.float)
+        return s, a, r, sn
+
 
 class ActorNetwork(nn.Module):
     def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
@@ -118,34 +128,42 @@ class ActorNetwork(nn.Module):
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
         self.bn2 = nn.BatchNorm1d(fc2_dims)
         self.out = nn.Linear(fc2_dims, out_dims)
-        #self.bn3 = nn.BatchNorm1d(out_dims)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, state):
-        a = F.relu(self.fc1(state))
+        a = self.fc1(state)
         a = self.bn1(a)
-        a = F.relu(self.fc2(a))
+        a = F.relu(a)
+        a = self.fc2(a)
         a = self.bn2(a)
+        a = F.relu(a)
         a = self.out(a)
         return a
 
 
 class CriticNetwork(nn.Module):
-    def __init__(self, lr=tg.lr, in_dims=tg.inputs+tg.outputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
+    def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
         super(CriticNetwork, self).__init__()
         self.fc1 = nn.Linear(in_dims,fc1_dims)
         self.bn1 = nn.BatchNorm1d(fc1_dims)
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
         self.bn2 = nn.BatchNorm1d(fc2_dims)
         self.out  = nn.Linear(fc2_dims, out_dims)
-        #self.bn3 = nn.BatchNorm1d(out_dims)
+        self.action_value = nn.Linear(out_dims, fc2_dims)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, state, action):
-        q = torch.cat([action, state], 1)
-        q = F.relu(self.fc1(q))
+        q = self.fc1(state)
         q = self.bn1(q)
-        q = F.relu(self.fc2(q))
+        q = F.relu(q)
+        q = self.fc2(q)
         q = self.bn2(q)
-        q = self.out(q)
-        return q
+        q = F.relu(q)
+
+        action_value = self.action_value(action)
+        action_value = F.relu(action_value)
+
+        q_action = self.out(torch.add(q, action_value))
+        q_action = F.relu(q_action)
+
+        return q_action
