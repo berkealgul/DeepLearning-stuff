@@ -19,11 +19,13 @@ class Brain():
     def predict_action(self, state):
         self.actor.eval()
         action = self.actor(state)
-        self.actor.train()
         return action
 
     def train(self, steps):
-        for i in range(steps):
+        if steps < 65:
+            return
+
+        for i in range(steps-64, steps):
             s, a, r, sn = self.replayBuffer.get_sample(i)
 
             self.target_actor.eval()
@@ -42,12 +44,11 @@ class Brain():
             self.critic.optimizer.step()
 
             self.critic.eval()
+            self.actor.train()
 
             self.actor.optimizer.zero_grad()
-            qVal = self.critic.forward(s, a)
-            #TODO: BU uygun olmayan aktivasyon fonksiyonu(büyük ihtimal) yüzünden
-            # Vanishing gradient problemi yaşıyorsun. Çözümü araştır
-            actor_loss = torch.mean(qVal*a)
+            actor_loss = -self.critic.forward(s, a)
+            actor_loss = torch.mean(actor_loss)
             actor_loss.backward(retain_graph=True)
             self.actor.optimizer.step()
 
@@ -148,8 +149,8 @@ class CriticNetwork(nn.Module):
         self.bn1 = nn.BatchNorm1d(fc1_dims)
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
         self.bn2 = nn.BatchNorm1d(fc2_dims)
-        self.out  = nn.Linear(fc2_dims, out_dims)
         self.action_value = nn.Linear(out_dims, fc2_dims)
+        self.q  = nn.Linear(fc2_dims, 1)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, state, action):
@@ -163,7 +164,6 @@ class CriticNetwork(nn.Module):
         action_value = self.action_value(action)
         action_value = F.relu(action_value)
 
-        q_action = self.out(torch.add(q, action_value))
-        q_action = F.relu(q_action)
+        q_action = self.q(torch.add(q, action_value))
 
         return q_action
