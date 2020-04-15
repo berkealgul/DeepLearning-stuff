@@ -26,7 +26,6 @@ class Agent:
     def step(self, dt):
         s = self.get_state()
         a = self.brain.predict_action(s)# * dt
-        print(a)
         self.arm.update(a)
         r, done = self.get_reward()
         sn = self.get_state()
@@ -86,7 +85,7 @@ class Agent:
                 r += 100
         else:
             r = -k
-        return r, done
+        return r/100, done
 
     def reset(self):
         self.set_goal()

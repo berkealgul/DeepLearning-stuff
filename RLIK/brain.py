@@ -43,6 +43,7 @@ class Brain():
         self.critic.optimizer.zero_grad()
         critic_loss = F.mse_loss(qVal_t, qVal)
         critic_loss.backward(retain_graph=True)
+        torch.nn.utils.clip_grad_norm(self.critic.parameters(), 1)
         self.critic.optimizer.step()
 
         self.critic.eval()
@@ -55,7 +56,7 @@ class Brain():
         torch.nn.utils.clip_grad_norm(self.actor.parameters(), 1)
         self.actor.optimizer.step()
 
-        print(" a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
+        print("loss  a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
 
         self.update_target_networks()
 
