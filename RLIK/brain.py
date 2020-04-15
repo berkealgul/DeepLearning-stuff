@@ -22,37 +22,40 @@ class Brain():
         return action
 
     def train(self, steps):
-        if steps < 65:
-            return
+        s, a, r, sn = self.replayBuffer.get_all_buffer()
 
-        for i in range(steps-64, steps):
-            s, a, r, sn = self.replayBuffer.get_sample(i)
+        self.target_actor.eval()
+        self.target_critic.eval()
+        self.critic.eval()
 
-            self.target_actor.eval()
-            self.target_critic.eval()
-            self.critic.eval()
+        aVal = self.target_actor.forward(sn)
+        qvt = self.target_critic.forward(sn, aVal)
 
-            aVal = self.target_actor.forward(sn)
-            qVal_t = r + self.gamma*self.target_critic.forward(sn, aVal)
-            qVal = self.critic.forward(s, a)
+        qVal_t = []
+        for i in range(len(r)):
+            qVal_t.append(r[i] + self.gamma*qvt[i])
 
-            self.critic.train()
+        qVal_t = torch.stack(qVal_t)
+        qVal = self.critic.forward(s, a)
 
-            self.critic.optimizer.zero_grad()
-            critic_loss = F.mse_loss(qVal_t, qVal)
-            critic_loss.backward(retain_graph=True)
-            self.critic.optimizer.step()
+        self.critic.train()
 
-            self.critic.eval()
-            self.actor.train()
+        self.critic.optimizer.zero_grad()
+        critic_loss = F.mse_loss(qVal_t, qVal)
+        critic_loss.backward(retain_graph=True)
+        self.critic.optimizer.step()
 
-            self.actor.optimizer.zero_grad()
-            actor_loss = -self.critic.forward(s, a)
-            actor_loss = torch.mean(actor_loss)
-            actor_loss.backward(retain_graph=True)
-            self.actor.optimizer.step()
+        self.critic.eval()
+        self.actor.train()
 
-            print(" a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
+        self.actor.optimizer.zero_grad()
+        actor_loss = -self.critic.forward(s, a)
+        actor_loss = torch.mean(actor_loss)
+        actor_loss.backward(retain_graph=True)
+        torch.nn.utils.clip_grad_norm(self.actor.parameters(), 1)
+        self.actor.optimizer.step()
+
+        print(" a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
 
         self.update_target_networks()
 
@@ -114,10 +117,10 @@ class ReplayBuffer():
         return s, a, r, sn
 
     def get_all_buffer(self):
-        s = torch.stack(self.states, dim=0)
-        a = torch.stack(self.actions, dim=0)
-        sn = torch.stack(self.next_states, dim=0)
-        r = torch.tensor(self.rewards, dtype=torch.float)
+        s = torch.stack(self.states)
+        a = torch.stack(self.actions)
+        sn = torch.stack(self.next_states)
+        r = self.rewards
         return s, a, r, sn
 
 
@@ -125,9 +128,9 @@ class ActorNetwork(nn.Module):
     def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
         super(ActorNetwork, self).__init__()
         self.fc1 = nn.Linear(in_dims,fc1_dims)
-        self.bn1 = nn.BatchNorm1d(fc1_dims)
+        self.bn1 = nn.LayerNorm(fc1_dims)
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
-        self.bn2 = nn.BatchNorm1d(fc2_dims)
+        self.bn2 = nn.LayerNorm(fc2_dims)
         self.out = nn.Linear(fc2_dims, out_dims)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
@@ -146,9 +149,9 @@ class CriticNetwork(nn.Module):
     def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
         super(CriticNetwork, self).__init__()
         self.fc1 = nn.Linear(in_dims,fc1_dims)
-        self.bn1 = nn.BatchNorm1d(fc1_dims)
+        self.bn1 = nn.LayerNorm(fc1_dims)
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
-        self.bn2 = nn.BatchNorm1d(fc2_dims)
+        self.bn2 = nn.LayerNorm(fc2_dims)
         self.action_value = nn.Linear(out_dims, fc2_dims)
         self.q  = nn.Linear(fc2_dims, 1)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)

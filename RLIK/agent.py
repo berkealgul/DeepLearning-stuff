@@ -25,7 +25,8 @@ class Agent:
 
     def step(self, dt):
         s = self.get_state()
-        a = self.brain.predict_action(s) * dt
+        a = self.brain.predict_action(s)# * dt
+        print(a)
         self.arm.update(a)
         r, done = self.get_reward()
         sn = self.get_state()

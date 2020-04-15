@@ -14,7 +14,11 @@ class Environment:
         self.agent = Agent((int(self.w/2), int(self.h/2)))
 
     def begin(self):
-        self.agent.brain.load()
+        try:
+            self.agent.brain.load()
+        except:
+            print("LOAD FAILED")
+    
         for i in range(tc.max_episodes):
             self.update_log(str(i+1))
             for j in range(tc.steps_each_ep):
@@ -29,7 +33,7 @@ class Environment:
                 if done is True:
                     print("--------------DONE------------------")
                     break
-            self.agent.brain.train()
+            self.agent.brain.train(j)
             self.agent.reset()
             self.agent.brain.save()
 
