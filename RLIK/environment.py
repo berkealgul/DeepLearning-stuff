@@ -14,11 +14,15 @@ class Environment:
         self.agent = Agent((int(self.w/2), int(self.h/2)))
 
     def begin(self):
-        try:
-            self.agent.brain.load()
-        except:
-            print("LOAD FAILED")
-    
+        if tc.load is True:
+            print("Loading...")
+            try:
+                self.agent.brain.load()
+            except:
+                print("LOAD FAILED")
+        else:
+            print("Didnt attempt to load")
+
         for i in range(tc.max_episodes):
             self.update_log(str(i+1))
             for j in range(tc.steps_each_ep):

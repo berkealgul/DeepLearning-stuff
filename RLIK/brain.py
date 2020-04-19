@@ -47,10 +47,9 @@ class Brain():
         self.critic.optimizer.step()
 
         self.critic.eval()
+        mu = self.actor.forward(s)
         self.actor.train()
-
-        self.actor.optimizer.zero_grad()
-        actor_loss = -self.critic.forward(s, a)
+        actor_loss = -self.critic.forward(s, mu)
         actor_loss = torch.mean(actor_loss)
         actor_loss.backward(retain_graph=True)
         torch.nn.utils.clip_grad_norm(self.actor.parameters(), 1)

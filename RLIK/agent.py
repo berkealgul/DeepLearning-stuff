@@ -59,7 +59,7 @@ class Agent:
 
     def get_reward(self):
         a = 1 / 70
-        k = 20
+        k = 100
         b = 10 / (2 * math.pi)
         end_eff = self.arm.axis_pivots[-1]
         goal = self.goal.center
@@ -82,7 +82,7 @@ class Agent:
             r = (-a * dist) - (b * dA)
 
             if done is True:
-                r += 100
+                r += k
         else:
             r = -k
         return r/100, done
