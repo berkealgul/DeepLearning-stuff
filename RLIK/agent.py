@@ -44,7 +44,7 @@ class Agent:
         state = list()
         state.append([])
         for i in range(len(angles)):
-            state[0].append(angles[i])
+            state[0].append(angles[i] % 360)
 
         px = self.pivot[0]
         py = self.pivot[1]
@@ -59,7 +59,7 @@ class Agent:
 
     def get_reward(self):
         a = 1 / 70
-        k = 100
+        k = 20
         b = 10 / (2 * math.pi)
         end_eff = self.arm.axis_pivots[-1]
         goal = self.goal.center
@@ -82,7 +82,7 @@ class Agent:
             r = (-a * dist) - (b * dA)
 
             if done is True:
-                r += k
+                r += k * 2
         else:
             r = -k
         return r/100, done
