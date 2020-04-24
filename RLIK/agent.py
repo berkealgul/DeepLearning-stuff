@@ -44,7 +44,7 @@ class Agent:
         state = list()
         state.append([])
         for i in range(len(angles)):
-            state[0].append(angles[i] % 360)
+            state[0].append(angles[i])
 
         px = self.pivot[0]
         py = self.pivot[1]
