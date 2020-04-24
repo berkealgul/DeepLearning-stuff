@@ -91,3 +91,4 @@ class Agent:
         self.set_goal()
         for i in range(len(self.arm.joint_angles)):
             self.arm.joint_angles[i] = random.randint(0,360)
+        self.brain.replayBuffer.reset()

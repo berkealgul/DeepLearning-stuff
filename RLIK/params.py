@@ -22,7 +22,7 @@ class TrainConfig:
     load          = True
     steps_each_ep = 150
     max_episodes  = 10000
-    lr            = 0.005
+    lr            = 0.01
     gamma         = 0.99
     inputs        = 7
     outputs       = 3

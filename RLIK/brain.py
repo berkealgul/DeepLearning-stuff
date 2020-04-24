@@ -43,16 +43,16 @@ class Brain():
         self.critic.optimizer.zero_grad()
         critic_loss = F.mse_loss(qVal_t, qVal)
         critic_loss.backward(retain_graph=True)
-        torch.nn.utils.clip_grad_norm(self.critic.parameters(), 1)
+        #torch.nn.utils.clip_grad_norm(self.critic.parameters(), 1)
         self.critic.optimizer.step()
 
         self.critic.eval()
         mu = self.actor.forward(s)
         self.actor.train()
-        actor_loss = -self.critic.forward(s, mu)
+        actor_loss = -self.critic.forward(s, mu) * mu
         actor_loss = torch.mean(actor_loss)
         actor_loss.backward(retain_graph=True)
-        torch.nn.utils.clip_grad_norm(self.actor.parameters(), 1)
+        #torch.nn.utils.clip_grad_norm(self.actor.parameters(), 1)
         self.actor.optimizer.step()
 
         print("loss  a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
@@ -122,6 +122,12 @@ class ReplayBuffer():
         sn = torch.stack(self.next_states)
         r = self.rewards
         return s, a, r, sn
+
+    def reset(self):
+        self.states.clear()
+        self.next_states.clear()
+        self.rewards.clear()
+        self.actions.clear()
 
 
 class ActorNetwork(nn.Module):
