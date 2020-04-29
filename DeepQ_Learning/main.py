@@ -3,7 +3,7 @@ from dql import Agent
 from utils import plot_learning_curve, make_env
 
 def main():
-    env_name = "PongNoFrameskip-v4"
+    env_name = 'PongNoFrameskip-v4'
     env = make_env(env_name)
     best_score = -np.inf
 
@@ -13,7 +13,7 @@ def main():
             n_actions=env.action_space.n, in_dims=env.observation_space.shape,
             batch_size=32, mem_size=2500)
 
-    plot = 'plots\' + env_name + '.png'
+    plot = 'plots/atari.png'
 
     if load_checkpoint:
         agent.load_model()

@@ -7,9 +7,8 @@ import numpy as np
 
 
 class Agent:
-	def __init__(self, lr, gamma, epsilon, env_name, in_dims, hid_dims=512,
-	 			n_actions, batch_size, mem_size, eps_min=0.01, eps_dec=5e-7
-				,replace=1000 ,chkp_dir="saves\"):
+	def __init__(self, lr, gamma, epsilon, env_name, in_dims, n_actions, batch_size, mem_size,
+	 			 hid_dims=512, eps_min=0.01, eps_dec=5e-7, replace=1000 ,chkp_dir='saves/'):
 		self.gamma = gamma
 		self.epsilon = epsilon
 		self.eps_dec = eps_dec
@@ -59,7 +58,7 @@ class Agent:
 
 	def save_model(self):
 		print("Saving")
-		self.q_eval.save_check	point()
+		self.q_eval.save_checkpoint()
 		self.q_next.save_checkpoint()
 
 	def load_model(self):
@@ -94,80 +93,79 @@ class Agent:
 		self.decrement_epsilon()
 
 class QNetwork(nn.Module):
-    def __init__():
-        def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir):
-        super(QNetwork, self).__init__()
-        self.chpk_file = os.path.join(chkp_dir, name)
+	def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir):
+		super(QNetwork, self).__init__()
+		self.chpk_file = os.path.join(chkp_dir, name)
 
-        self.conv1 = nn.Conv2d(in_dims[0], 32, 8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
+		self.conv1 = nn.Conv2d(in_dims[0], 32, 8, stride=4)
+		self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
+		self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
 
-        fc_inputs = calculate_fc_inputs(in_dims)
+		fc_inputs = calculate_fc_inputs(in_dims)
 
-        self.fc1 = nn.Linear(fc_inputs, hid_dims)
-        self.fc2 = nn.Linear(hid_dims, n_actions)
+		self.fc1 = nn.Linear(fc_inputs, hid_dims)
+		self.fc2 = nn.Linear(hid_dims, n_actions)
 
-        self.loss = nn.MSELoss()
-        self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
-        self.device = T.device("cudo:0" if T.cuda.is_available() else "cpu")
-        self.to(self.device)
+		self.loss = nn.MSELoss()
+		self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
+		self.device = T.device("cudo:0" if T.cuda.is_available() else "cpu")
+		self.to(self.device)
 
-    def calculate_fc_inputs(self, in_dims):
-        state = T.zeros(1, *in_dims)
-        dims = self.conv1(dims)
-        dims = self.conv2(dims)
-        dims = self.conv3(dims)
-        return int(np.prod(dims.size()))
+	def calculate_fc_inputs(self, in_dims):
+		state = T.zeros(1, *in_dims)
+		dims = self.conv1(dims)
+		dims = self.conv2(dims)
+		dims = self.conv3(dims)
+		return int(np.prod(dims.size()))
 
-    def forward(self, state):
-        conv = F.relu(self.conv1(state))
-        conv = F.relu(self.conv2(conv))
-        conv = F.relu(self.conv3(conv))
+	def forward(self, state):
+		conv = F.relu(self.conv1(state))
+		conv = F.relu(self.conv2(conv))
+		conv = F.relu(self.conv3(conv))
 
-        #conv size = (filter h w)
-        conv_state = conv.view(conv.size()[0], -1)
-        action = F.relu(self.fc1(conv_state))
-        action = self.fc2(action)
+		#conv size = (filter h w)
+		conv_state = conv.view(conv.size()[0], -1)
+		action = F.relu(self.fc1(conv_state))
+		action = self.fc2(action)
 
-        return action
+		return action
 
-    def save_checkpoint(self):
-        print("SAVING...")
-        T.save(self.state_dict(), self.chpk_file)
+	def save_checkpoint(self):
+		print("SAVING...")
+		T.save(self.state_dict(), self.chpk_file)
 
-    def load_checkpoint(self):
-        print("LOADING...")
-        self.load_state_dict(T.load(self.chpk_file))
+	def load_checkpoint(self):
+		print("LOADING...")
+		self.load_state_dict(T.load(self.chpk_file))
 
 
 class ReplayBuffer:
-    def __init__(self, mem_size, input_shape, n_actions):
-        self.mem_size = mem_size
-        self.mem_center = 0
-        self.state_memory = np.zeros(self.mem_size, *input_shape)
-        self.new_state_memory = np.zeros(self.mem_size, *input_shape)
-        self.action_memory = np.zeros(self.mem_size, n_actions)
-        self.reward_memory = np.zeros(self.mem_size)
-        self.terminal_memory = np.zeros(self.mem_size, dtype=float32)
+	def __init__(self, mem_size, input_shape, n_actions):
+		self.mem_size = mem_size
+		self.mem_center = 0
+		self.state_memory = np.zeros(self.mem_size, *input_shape)
+		self.new_state_memory = np.zeros(self.mem_size, *input_shape)
+		self.action_memory = np.zeros(self.mem_size, n_actions)
+		self.reward_memory = np.zeros(self.mem_size)
+		self.terminal_memory = np.zeros(self.mem_size, dtype=float32)
 
-    def store_translition(self, state, new_state, action, reward, done):
-        index = self.mem_center % self.mem_size
-        self.state_memory[index] = state
-        self.new_state_memory[index] = new_state
-        self.action_memory[index] = action
-        self.reward_memory[index] = reward
-        self.terminal_memory[index] = 1 - int(done)
-        self.mem_center += 1
+	def store_translition(self, state, new_state, action, reward, done):
+		index = self.mem_center % self.mem_size
+		self.state_memory[index] = state
+		self.new_state_memory[index] = new_state
+		self.action_memory[index] = action
+		self.reward_memory[index] = reward
+		self.terminal_memory[index] = 1 - int(done)
+		self.mem_center += 1
 
-    def sample_buffer(self, batch_size):
-        max_mem = min(self.max_mem, self.mem_center)
-        batch = np.random.choice(max_mem, batch_size)
+	def sample_buffer(self, batch_size):
+		max_mem = min(self.max_mem, self.mem_center)
+		batch = np.random.choice(max_mem, batch_size)
 
-        state = self.state_memory[batch]
-        new_state = self.new_state_memory[batch]
-        action = self.action_memory[batch]
-        reward = self.reward_memory[batch]
-        done = self.terminal_memory[batch]
+		state = self.state_memory[batch]
+		new_state = self.new_state_memory[batch]
+		action = self.action_memory[batch]
+		reward = self.reward_memory[batch]
+		done = self.terminal_memory[batch]
 
-        return states, new_states, actions, rewards, terminal
+		return states, new_states, actions, rewards, terminal
