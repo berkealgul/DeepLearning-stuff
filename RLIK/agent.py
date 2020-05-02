@@ -82,10 +82,11 @@ class Agent:
             r = (-a * dist) - (b * dA)
 
             if done is True:
-                r += k * 2
+                r += k
         else:
             r = -k
-        return r/100, done
+
+        return r/20, done
 
     def reset(self):
         self.set_goal()

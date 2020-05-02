@@ -26,6 +26,6 @@ class TrainConfig:
     gamma         = 0.99
     inputs        = 7
     outputs       = 3
-    hidden1       = 400
-    hidden2       = 300
+    hidden1       = 100
+    hidden2       = 75
     tau           = 0.001

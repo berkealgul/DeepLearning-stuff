@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import torch as T
 from params import TrainConfig as tg
 import numpy as np
 import os
@@ -49,7 +50,7 @@ class Brain():
         self.critic.eval()
         mu = self.actor.forward(s)
         self.actor.train()
-        actor_loss = -self.critic.forward(s, mu) * mu
+        actor_loss = self.critic.forward(s, mu)# * mu
         actor_loss = torch.mean(actor_loss)
         actor_loss.backward(retain_graph=True)
         #torch.nn.utils.clip_grad_norm(self.actor.parameters(), 1)
@@ -117,10 +118,11 @@ class ReplayBuffer():
         return s, a, r, sn
 
     def get_all_buffer(self):
-        s = torch.stack(self.states)
-        a = torch.stack(self.actions)
-        sn = torch.stack(self.next_states)
-        r = self.rewards
+        batch_size = len(self.states) if len(self.states) < 64 else 64
+        s = torch.stack(self.states[0:batch_size])
+        a = torch.stack(self.actions[0:batch_size])
+        sn = torch.stack(self.next_states[0:batch_size])
+        r = self.rewards[0:batch_size]
         return s, a, r, sn
 
     def reset(self):
@@ -143,11 +145,14 @@ class ActorNetwork(nn.Module):
     def forward(self, state):
         a = self.fc1(state)
         a = self.bn1(a)
-        a = F.relu(a)
+        a = T.tanh(a)
+        #a = F.relu(a)
         a = self.fc2(a)
         a = self.bn2(a)
-        a = F.relu(a)
+        a = T.tanh(a)
+        #a = F.relu(a)
         a = self.out(a)
+        a = T.tanh(a)
         return a
 
 
@@ -165,13 +170,16 @@ class CriticNetwork(nn.Module):
     def forward(self, state, action):
         q = self.fc1(state)
         q = self.bn1(q)
-        q = F.relu(q)
+        q = T.tanh(q)
+        #q = F.relu(q)
         q = self.fc2(q)
         q = self.bn2(q)
-        q = F.relu(q)
+        #q = F.relu(q)
+        q = T.tanh(q)
 
         action_value = self.action_value(action)
-        action_value = F.relu(action_value)
+        #action_value = F.relu(action_value)
+        action_value = T.tanh(action_value)
 
         q_action = self.q(torch.add(q, action_value))
 
