@@ -1,4 +1,5 @@
 import os
+import time
 import cv2
 import numpy as np
 import torch as T
@@ -8,8 +9,8 @@ from torch.autograd import Variable
 from utils import *
 
 
-def get_test_input():
-	img = cv2.imread("dog-cycle-car.png")
+def get_test_input(im_file):
+	img = cv2.imread(im_file)
 	img = cv2.resize(img, (416,416))
 	img_ = img[:,:,::-1].transpose((2,0,1))
 	img_ = img_[np.newaxis,:,:,:]/255.0
@@ -145,10 +146,12 @@ class EmptyLayer(nn.Module):
 
 
 class Darknet(nn.Module):
-	def __init__(self, config):
+	def __init__(self, config, weightfile=None):
 		super(Darknet, self).__init__()
 		self.blocks = parse_cfg(config)
 		self.net_info, self.module_list = create_modules(self.blocks)
+		if weightfile != None:
+			self.load_weights(weightfile)
 
 	def forward(self, x, CUDA):
 		outputs = {}
@@ -286,12 +289,18 @@ class Darknet(nn.Module):
 	            conv_weights = conv_weights.view_as(conv.weight.data)
 	            conv.weight.data.copy_(conv_weights)
 
+#im_name = "cars.jpeg"
+im_name = "dog-cycle-car.png"
 
-model = Darknet("config.cfg")
-inp = get_test_input()
+model = Darknet("config.cfg", "weights/yolov3.weights")
+inp = get_test_input(im_name)
+#start_time = time.time()
+
 pred = model(inp, torch.cuda.is_available())
-print (pred)
-print(pred.size())
 output = adjust_results(pred,0.5, 85)
-print(output)
-print(output.size())
+
+img = cv2.imread(im_name)
+img = cv2.resize(img, (416,416))
+write_result(output, img, (416, 416))
+
+cv2.imwrite("result.png", img)

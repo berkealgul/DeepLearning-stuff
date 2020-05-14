@@ -208,3 +208,15 @@ def load_classes(namesfile):
     fp = open(namesfile, "r")
     names = fp.read().split("\n")[:-1]
     return names
+
+
+def write_result(result, img, in_dim):
+    sX = img.shape[0] / in_dim[0]
+    sY = img.shape[1] / in_dim[1]
+
+    for cell in result:
+        x = int(cell[1])
+        y = int(cell[2])
+        w = int(cell[3])
+        h = int(cell[4])
+        cv2.rectangle(img, (x, y), (x+w, y+h), (255,0,0),2)
