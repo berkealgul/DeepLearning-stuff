@@ -1,18 +1,18 @@
 from __future__ import division
 
 import torch as T
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 import cv2
+import random
 
 
 def unique(tensor):
     tensor_np = tensor.cpu().numpy()
     unique_np = np.unique(tensor_np)
-    unique_tensor = torch.from_numpy(unique_np)
+    unique_tensor = T.from_numpy(unique_np)
 
     tensor_res = tensor.new(unique_tensor.shape)
     tensor_res.copy_(unique_tensor)
@@ -25,13 +25,13 @@ def bbox_iou(box1, box2):
     b2_x1, b2_y1, b2_x2, b2_y2 = box2[:,0], box2[:,1], box2[:,2], box2[:,3]
 
     #get the corrdinates of the intersection rectangle
-    inter_rect_x1 =  torch.max(b1_x1, b2_x1)
-    inter_rect_y1 =  torch.max(b1_y1, b2_y1)
-    inter_rect_x2 =  torch.min(b1_x2, b2_x2)
-    inter_rect_y2 =  torch.min(b1_y2, b2_y2)
+    inter_rect_x1 =  T.max(b1_x1, b2_x1)
+    inter_rect_y1 =  T.max(b1_y1, b2_y1)
+    inter_rect_x2 =  T.min(b1_x2, b2_x2)
+    inter_rect_y2 =  T.min(b1_y2, b2_y2)
 
     #Intersection area
-    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1 + 1, min=0) * torch.clamp(inter_rect_y2 - inter_rect_y1 + 1, min=0)
+    inter_area = T.clamp(inter_rect_x2 - inter_rect_x1 + 1, min=0) * T.clamp(inter_rect_y2 - inter_rect_y1 + 1, min=0)
 
     #Union Area
     b1_area = (b1_x2 - b1_x1 + 1)*(b1_y2 - b1_y1 + 1)
@@ -111,13 +111,13 @@ def adjust_results(prediction, confidence, num_classes, nms_conf = 0.4):
     for ind in range(batch_size):
         image_pred = prediction[ind]
 
-        max_conf, max_conf_score = torch.max(image_pred[:,5:5+ num_classes], 1)
+        max_conf, max_conf_score = T.max(image_pred[:,5:5+ num_classes], 1)
         max_conf = max_conf.float().unsqueeze(1)
         max_conf_score = max_conf_score.float().unsqueeze(1)
         seq = (image_pred[:,:5], max_conf, max_conf_score)
-        image_pred = torch.cat(seq, 1)
+        image_pred = T.cat(seq, 1)
 
-        non_zero_ind =  (torch.nonzero(image_pred[:,4]))
+        non_zero_ind =  (T.nonzero(image_pred[:,4]))
         try:
             image_pred_ = image_pred[non_zero_ind.squeeze(),:].view(-1,7)
         except:
@@ -133,12 +133,12 @@ def adjust_results(prediction, confidence, num_classes, nms_conf = 0.4):
             #perform NMS
             #get the detections with one particular class
             cls_mask = image_pred_*(image_pred_[:,-1] == cls).float().unsqueeze(1)
-            class_mask_ind = torch.nonzero(cls_mask[:,-2]).squeeze()
+            class_mask_ind = T.nonzero(cls_mask[:,-2]).squeeze()
             image_pred_class = image_pred_[class_mask_ind].view(-1,7)
 
             #sort the detections such that the entry with the maximum objectness
             #confidence is at the top
-            conf_sort_index = torch.sort(image_pred_class[:,4], descending = True )[1]
+            conf_sort_index = T.sort(image_pred_class[:,4], descending = True )[1]
             image_pred_class = image_pred_class[conf_sort_index]
             idx = image_pred_class.size(0)   #Number of detections
 
@@ -158,18 +158,18 @@ def adjust_results(prediction, confidence, num_classes, nms_conf = 0.4):
                 image_pred_class[i+1:] *= iou_mask
 
                 #Remove the non-zero entries
-                non_zero_ind = torch.nonzero(image_pred_class[:,4]).squeeze()
+                non_zero_ind = T.nonzero(image_pred_class[:,4]).squeeze()
                 image_pred_class = image_pred_class[non_zero_ind].view(-1,7)
 
             batch_ind = image_pred_class.new(image_pred_class.size(0), 1).fill_(ind)      #Repeat the batch_id for as many detections of the class cls in the image
             seq = batch_ind, image_pred_class
 
             if not write:
-                output = torch.cat(seq,1)
+                output = T.cat(seq,1)
                 write = True
             else:
-                out = torch.cat(seq,1)
-                output = torch.cat((output,out))
+                out = T.cat(seq,1)
+                output = T.cat((output,out))
 
     try:
         return output
@@ -178,7 +178,6 @@ def adjust_results(prediction, confidence, num_classes, nms_conf = 0.4):
 
 
 def letterbox_image(img, inp_dim):
-    '''resize image with unchanged aspect ratio using padding'''
     img_w, img_h = img.shape[1], img.shape[0]
     w, h = inp_dim
     new_w = int(img_w * min(w/img_w, h/img_h))
@@ -186,21 +185,16 @@ def letterbox_image(img, inp_dim):
     resized_image = cv2.resize(img, (new_w,new_h), interpolation = cv2.INTER_CUBIC)
 
     canvas = np.full((inp_dim[1], inp_dim[0], 3), 128)
-
     canvas[(h-new_h)//2:(h-new_h)//2 + new_h,(w-new_w)//2:(w-new_w)//2 + new_w,:] = resized_image
 
     return canvas
 
 
 def prep_image(img, inp_dim):
-    """
-    Prepare image for inputting to the neural network.
-
-    Returns a Variable
-    """
     img = (letterbox_image(img, (inp_dim, inp_dim)))
     img = img[:,:,::-1].transpose((2,0,1)).copy()
-    img = torch.from_numpy(img).float().div(255.0).unsqueeze(0)
+    img = T.from_numpy(img).float().div(255.0).unsqueeze(0)
+    img = Variable(img)
     return img
 
 
@@ -210,13 +204,32 @@ def load_classes(namesfile):
     return names
 
 
-def write_result(result, img, in_dim):
-    sX = img.shape[0] / in_dim[0]
-    sY = img.shape[1] / in_dim[1]
+def create_colors(num_classes):
+    colors = [(random.randrange(0, 125), random.randrange(0, 125),
+                random.randrange(0, 125)) for i in range(num_classes)]
+    return colors
+
+
+def write_result(result, img, in_dim, classes, colors):
+    # ASSUME INPUT DIM IS SQUARE
+
+    scale = in_dim / max(img.shape)
+    offsetX = int((in_dim-img.shape[1]*scale)/2)
+    offsetY = int((in_dim-img.shape[0]*scale)/2)
+    result[:,[1,3]] = (result[:,[1,3]] - offsetX)/scale
+    result[:,[2,4]] = (result[:,[2,4]] - offsetY)/scale
 
     for cell in result:
-        x = int(cell[1])
-        y = int(cell[2])
-        w = int(cell[3])
-        h = int(cell[4])
-        cv2.rectangle(img, (x, y), (x+w, y+h), (255,0,0),2)
+        c1 = tuple((cell[1:3]).int())
+        c2 = tuple((cell[3:5]).int())
+
+        cls = int(cell[-1])
+        color = colors[cls]
+
+        label = "{0}".format(classes[cls])
+
+        cv2.rectangle(img, c1, c2, color, 3)
+        t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2 , 2)[0]
+        c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
+        cv2.rectangle(img, c1, c2, color,-1)
+        cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 2, [225,255,255], 2)

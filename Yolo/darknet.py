@@ -11,7 +11,8 @@ from utils import *
 
 def get_test_input(im_file):
 	img = cv2.imread(im_file)
-	img = cv2.resize(img, (416,416))
+	img = letterbox_image(img, (416,416))
+	cv2.imwrite("xd.jpg", img)
 	img_ = img[:,:,::-1].transpose((2,0,1))
 	img_ = img_[np.newaxis,:,:,:]/255.0
 	img_ = T.from_numpy(img_).float()
@@ -180,7 +181,7 @@ class Darknet(nn.Module):
 					map1 = outputs[i + layers[0]]
 					map2 = outputs[i + layers[1]]
 
-					x = torch.cat((map1, map2), 1)
+					x = T.cat((map1, map2), 1)
 
 			elif  type == "shortcut":
 				from_ = int(b["from"])
@@ -197,7 +198,7 @@ class Darknet(nn.Module):
 					detections = x
 					write = 1
 				else:
-					detections = torch.cat((detections, x), 1)
+					detections = T.cat((detections, x), 1)
 
 			outputs[i] = x
 		return detections
@@ -212,7 +213,7 @@ class Darknet(nn.Module):
 	    # 3. Subversion number
 	    # 4,5. Images seen by the network (during training)
 	    header = np.fromfile(fp, dtype = np.int32, count = 5)
-	    self.header = torch.from_numpy(header)
+	    self.header = T.from_numpy(header)
 	    self.seen = self.header[3]
 
 	    weights = np.fromfile(fp, dtype = np.float32)
@@ -241,16 +242,16 @@ class Darknet(nn.Module):
 	                num_bn_biases = bn.bias.numel()
 
 	                #Load the weights
-	                bn_biases = torch.from_numpy(weights[ptr:ptr + num_bn_biases])
+	                bn_biases = T.from_numpy(weights[ptr:ptr + num_bn_biases])
 	                ptr += num_bn_biases
 
-	                bn_weights = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
+	                bn_weights = T.from_numpy(weights[ptr: ptr + num_bn_biases])
 	                ptr  += num_bn_biases
 
-	                bn_running_mean = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
+	                bn_running_mean = T.from_numpy(weights[ptr: ptr + num_bn_biases])
 	                ptr  += num_bn_biases
 
-	                bn_running_var = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
+	                bn_running_var = T.from_numpy(weights[ptr: ptr + num_bn_biases])
 	                ptr  += num_bn_biases
 
 	                #Cast the loaded weights into dims of model weights.
@@ -270,7 +271,7 @@ class Darknet(nn.Module):
 	                num_biases = conv.bias.numel()
 
 	                #Load the weights
-	                conv_biases = torch.from_numpy(weights[ptr: ptr + num_biases])
+	                conv_biases = T.from_numpy(weights[ptr: ptr + num_biases])
 	                ptr = ptr + num_biases
 
 	                #reshape the loaded weights according to the dims of the model weights
@@ -283,24 +284,29 @@ class Darknet(nn.Module):
 	            num_weights = conv.weight.numel()
 
 	            #Do the same as above for weights
-	            conv_weights = torch.from_numpy(weights[ptr:ptr+num_weights])
+	            conv_weights = T.from_numpy(weights[ptr:ptr+num_weights])
 	            ptr = ptr + num_weights
 
 	            conv_weights = conv_weights.view_as(conv.weight.data)
 	            conv.weight.data.copy_(conv_weights)
 
-#im_name = "cars.jpeg"
-im_name = "dog-cycle-car.png"
 
-model = Darknet("config.cfg", "weights/yolov3.weights")
-inp = get_test_input(im_name)
-#start_time = time.time()
+if __name__ == "__main__":
+	#im_name = "cars.jpeg"
+	#im_name = "dog-cycle-car.png"
+	im_name = "rover.jpeg"
+	print("Testing")
+	model = Darknet("config.cfg", "weights/yolov3.weights")
+	inp = get_test_input(im_name)
+	#start_time = time.time()
 
-pred = model(inp, torch.cuda.is_available())
-output = adjust_results(pred,0.5, 85)
+	classes = load_classes("data/coco.names")
+	colors = create_colors(len(classes))
+	pred = model(inp, T.cuda.is_available())
+	output = adjust_results(pred,0.5, 85)
 
-img = cv2.imread(im_name)
-img = cv2.resize(img, (416,416))
-write_result(output, img, (416, 416))
+	img = cv2.imread(im_name)
+	#img = cv2.resize(img, (416,416))
+	write_result(output, img, 416, classes, colors)
 
-cv2.imwrite("result.png", img)
+	cv2.imwrite("result.png", img)
