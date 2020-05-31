@@ -16,6 +16,7 @@ class Agent:
 		self.replace = replace
 		self.action_space = [i for i in range(n_actions)]
 		self.learn_step_cnt = 0
+		self.batch_size = batch_size
 
 		self.memory = ReplayBuffer(mem_size, in_dims, n_actions)
 		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, "Qeval", chkp_dir+env_name)
@@ -73,17 +74,17 @@ class Agent:
 		if self.memory.mem_center < self.batch_size:
 			return
 
-		states, new_states, actions, rewards, done = self.sample_memory()
+		states, new_states, actions, rewards, terminal = self.sample_memory()
 
 		self.q_eval.optimizer.zero_grad()
 		self.replace_target_net()
 
-		i = np.arrange(self.batch_size)
+		i = np.arange(self.batch_size)
 		q_pred = self.q_eval.forward(states)[i, actions]
 		q_next = self.q_next.forward(new_states).max(dim=1)[0]
 
-		q_next[dones] = 0.0
-		q_target = reward + self.gamma*q_next
+		q_next[terminal] = 0.0
+		q_target = rewards + self.gamma*q_next
 
 		loss = self.q_eval.loss(q_pred, q_target).to(self.q_eval.device)
 		loss.backward()
@@ -101,7 +102,7 @@ class QNetwork(nn.Module):
 		self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
 		self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
 
-		fc_inputs = calculate_fc_inputs(in_dims)
+		fc_inputs = self.calculate_fc_inputs(in_dims)
 
 		self.fc1 = nn.Linear(fc_inputs, hid_dims)
 		self.fc2 = nn.Linear(hid_dims, n_actions)
@@ -112,7 +113,7 @@ class QNetwork(nn.Module):
 		self.to(self.device)
 
 	def calculate_fc_inputs(self, in_dims):
-		state = T.zeros(1, *in_dims)
+		dims = T.zeros(1, *in_dims)
 		dims = self.conv1(dims)
 		dims = self.conv2(dims)
 		dims = self.conv3(dims)
@@ -143,11 +144,11 @@ class ReplayBuffer:
 	def __init__(self, mem_size, input_shape, n_actions):
 		self.mem_size = mem_size
 		self.mem_center = 0
-		self.state_memory = np.zeros(self.mem_size, *input_shape)
-		self.new_state_memory = np.zeros(self.mem_size, *input_shape)
-		self.action_memory = np.zeros(self.mem_size, n_actions)
-		self.reward_memory = np.zeros(self.mem_size)
-		self.terminal_memory = np.zeros(self.mem_size, dtype=float32)
+		self.state_memory = np.zeros((self.mem_size, *input_shape),dtype=np.float32)
+		self.new_state_memory = np.zeros((self.mem_size, *input_shape),dtype=np.float32)
+		self.action_memory = np.zeros(self.mem_size, dtype=np.int64)
+		self.reward_memory = np.zeros(self.mem_size,dtype=np.float32)
+		self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool)
 
 	def store_translition(self, state, new_state, action, reward, done):
 		index = self.mem_center % self.mem_size
@@ -159,13 +160,13 @@ class ReplayBuffer:
 		self.mem_center += 1
 
 	def sample_buffer(self, batch_size):
-		max_mem = min(self.max_mem, self.mem_center)
+		max_mem = min(self.mem_size, self.mem_center)
 		batch = np.random.choice(max_mem, batch_size)
 
-		state = self.state_memory[batch]
-		new_state = self.new_state_memory[batch]
-		action = self.action_memory[batch]
-		reward = self.reward_memory[batch]
-		done = self.terminal_memory[batch]
+		states = self.state_memory[batch]
+		new_states = self.new_state_memory[batch]
+		actions = self.action_memory[batch]
+		rewards = self.reward_memory[batch]
+		terminal = self.terminal_memory[batch]
 
 		return states, new_states, actions, rewards, terminal
