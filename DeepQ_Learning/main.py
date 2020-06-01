@@ -7,7 +7,9 @@ def main():
     env = make_env(env_name)
     best_score = -np.inf
 
+    train = True
     load_checkpoint = True
+
     n_games = 500
     agent = Agent(lr=0.001, gamma=0.99, epsilon=1.0, env_name=env_name,
             n_actions=env.action_space.n, in_dims=env.observation_space.shape,
@@ -31,20 +33,23 @@ def main():
             obs_, reward, done, info = env.step(action)
             score += reward
 
-            if not load_checkpoint:
+            if train:
                 agent.store_translition(obs, obs_, action, reward, int(done))
                 agent.train()
 
-            env.render()
+            #env.render()
 
             n_steps += 1
             obs = obs_
 
         avg_score = np.mean(scores[-100:])
+
         if avg_score > best_score:
             best_score = avg_score
-            if load_checkpoint:
+            if train:
                 agent.save_model()
+
+        plot_learning_curve(steps_history, scores, eps_history, plot)
 
         print("Step: ", n_steps, "Game: ", i, "avg score: ", avg_score,
         "epsilon: ", agent.epsilon)
@@ -53,7 +58,7 @@ def main():
         eps_history.append(agent.epsilon)
         steps_history.append(n_steps)
 
-    plot_learning_curve(steps_history, scores, eps_history, plot)
+
 
 
 if __name__ == "__main__":
