@@ -17,10 +17,14 @@ class Agent:
 		self.action_space = [i for i in range(n_actions)]
 		self.learn_step_cnt = 0
 		self.batch_size = batch_size
+		self.losses = []
 
 		self.memory = ReplayBuffer(mem_size, in_dims, n_actions)
 		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, "Qeval", chkp_dir+env_name)
 		self.q_next = QNetwork(lr, in_dims, hid_dims, n_actions, "Qnext", chkp_dir+env_name)
+
+		print("Network device is: ", self.q_eval.device)
+
 
 	def choice_action(self, observation):
 		if np.random.random() > self.epsilon:
@@ -87,11 +91,20 @@ class Agent:
 		q_target = rewards + self.gamma*q_next
 
 		loss = self.q_eval.loss(q_pred, q_target).to(self.q_eval.device)
+
+		self.losses.append(loss.item())
+
 		loss.backward()
 		self.q_eval.optimizer.step()
 
 		self.learn_step_cnt += 1
 		self.decrement_epsilon()
+
+	def get_avg_loss(self):
+		avg_loss = np.mean(self.losses)
+		self.losses.clear()
+		return avg_loss
+
 
 class QNetwork(nn.Module):
 	def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir):
@@ -111,6 +124,7 @@ class QNetwork(nn.Module):
 		self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
 		self.device = T.device("cudo:0" if T.cuda.is_available() else "cpu")
 		self.to(self.device)
+
 
 	def calculate_fc_inputs(self, in_dims):
 		dims = T.zeros(1, *in_dims)

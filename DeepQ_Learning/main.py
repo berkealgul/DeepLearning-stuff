@@ -40,28 +40,28 @@ for i in range(n_games):
             agent.store_translition(obs, obs_, action, reward, int(done))
             agent.train()
 
-        env.render()
+        if render:
+            env.render()
 
         n_steps += 1
         obs = obs_
 
     avg_score = np.mean(scores[-100:])
+    avg_loss = agent.get_avg_loss()
 
     if avg_score > best_score:
         best_score = avg_score
         if train:
             agent.save_model()
 
-
-
-    print("Step: ", n_steps, "Game: ", i, "avg score: ", avg_score,
-    "epsilon: ", agent.epsilon)
-
     scores.append(score)
     eps_history.append(agent.epsilon)
     steps_history.append(n_steps)
 
     plot_learning_curve(steps_history, scores, eps_history, plot)
+
+    print("Step: ", n_steps, "Game: ", i, "avg score: ", avg_score,
+    "epsilon: ", agent.epsilon, "avg loss: ", avg_loss)
 
 
 print("Similation Done")
