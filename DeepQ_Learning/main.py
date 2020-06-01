@@ -7,7 +7,7 @@ def main():
     env = make_env(env_name)
     best_score = -np.inf
 
-    load_checkpoint = False
+    load_checkpoint = True
     n_games = 500
     agent = Agent(lr=0.001, gamma=0.99, epsilon=1.0, env_name=env_name,
             n_actions=env.action_space.n, in_dims=env.observation_space.shape,
@@ -33,7 +33,9 @@ def main():
 
             if not load_checkpoint:
                 agent.store_translition(obs, obs_, action, reward, int(done))
-                agent.learn()
+                agent.train()
+
+            env.render()
 
             n_steps += 1
             obs = obs_
