@@ -23,8 +23,6 @@ class Agent:
 		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, "Qeval", chkp_dir+env_name)
 		self.q_next = QNetwork(lr, in_dims, hid_dims, n_actions, "Qnext", chkp_dir+env_name)
 
-		print("Network device is: ", self.q_eval.device)
-
 
 	def choice_action(self, observation):
 		if np.random.random() > self.epsilon:
@@ -105,6 +103,9 @@ class Agent:
 		self.losses.clear()
 		return avg_loss
 
+	def get_device(self):
+		return self.q_eval.device
+
 
 class QNetwork(nn.Module):
 	def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir):
@@ -122,7 +123,7 @@ class QNetwork(nn.Module):
 
 		self.loss = nn.MSELoss()
 		self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
-		self.device = T.device("cudo:0" if T.cuda.is_available() else "cpu")
+		self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
 		self.to(self.device)
 
 

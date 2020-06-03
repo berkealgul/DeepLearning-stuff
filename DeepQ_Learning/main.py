@@ -1,4 +1,5 @@
 import numpy as np
+import time as t
 from dql import Agent
 from utils import *
 
@@ -18,6 +19,10 @@ agent = Agent(lr=0.001, gamma=0.99, epsilon=1.0, env_name=env_name,
         n_actions=env.action_space.n, in_dims=env.observation_space.shape,
         batch_size=32, mem_size=2500)
 
+device = agent.get_device()
+
+print("Device is ", device)
+
 plot = 'plots/atari.png'
 plot_loss = 'plots/atari_loss.png'
 
@@ -26,6 +31,7 @@ if load_checkpoint:
 
 scores, eps_history, steps_history, game, loss = [], [], [], [], []
 n_steps = 0
+time = 0
 
 for i in range(n_games):
     done = False
@@ -39,7 +45,9 @@ for i in range(n_games):
 
         if train:
             agent.store_translition(obs, obs_, action, reward, int(done))
+            time = t.time()
             agent.train()
+            time = (t.time() - time)
 
         if render:
             env.render()
@@ -65,7 +73,14 @@ for i in range(n_games):
     plot_learning_curve(steps_history, scores, eps_history, plot)
     plot_loss_curve(game, loss, plot_loss)
 
-    print("Step: ", n_steps, "Game: ", i, "avg score: ", avg_score,
-    "epsilon: ", agent.epsilon, "avg loss: ", avg_loss)
+    print("-----------------")
+    print("Step: ", n_steps),
+    print("Game: ", i)
+    print("\nEpsilon: ", agent.epsilon)
+    print("Avarage score: ", avg_score)
+    print("Avarage loss: ", avg_loss)
+    print("\nTraining device: ", device)
+    print("Train took: ", time, " secs")
+    print("-----------------")
 
 print("Similation Done")
