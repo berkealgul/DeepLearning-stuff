@@ -29,7 +29,7 @@ print("Device is ", device)
 if load_checkpoint:
     agent.load_model()
 
-scores, eps_history, steps_history, game, loss, times = [], [], [], [], [], []
+scores, eps_history, steps_history, game, loss = [], [], [], [], []
 n_steps = 0
 time = 0
 
@@ -39,11 +39,7 @@ for i in range(n_games):
     obs = env.reset()
 
     while not done:
-        # Choose action while according time
-        time = t.time()
         action = agent.choice_action(obs)
-        time = (t.time() - time)
-        times.append(time)
 
         obs_, reward, done, info = env.step(action)
         score += reward
@@ -62,7 +58,6 @@ for i in range(n_games):
         obs = obs_
 
     avg_score = np.mean(scores[-100:])
-    avg_decision_time = np.mean(times[-100:])
     avg_loss = agent.get_avg_loss()
 
     if avg_score > best_score:
@@ -88,7 +83,6 @@ for i in range(n_games):
     print("Avarage loss: ", avg_loss)
     print("\nTraining device: ", device)
     print("Train took: ", time, " secs")
-    print("Avarage decision time: ", avg_decision_time, " secs")
     print("-----------------")
 
 print("Similation Done")
