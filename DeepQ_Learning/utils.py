@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import gym
 
 def plot_learning_curve(x, scores, epsilons, filename, lines=None):
-    fig=plt.figure()
-    ax=fig.add_subplot(111, label="1")
-    ax2=fig.add_subplot(111, label="2", frame_on=False)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, label="1")
+    ax2 = fig.add_subplot(111, label="2", frame_on=False)
 
     ax.plot(x, epsilons, color="C0")
     ax.set_xlabel("Training Steps", color="C0")
@@ -32,6 +32,20 @@ def plot_learning_curve(x, scores, epsilons, filename, lines=None):
             plt.axvline(x=line)
 
     plt.savefig(filename)
+
+
+def plot_loss_curve(x, loss_history, filename):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, label="1")
+
+    ax.scatter(x, loss_history, color="C1")
+    ax.set_xlabel("Game", color="C0")
+    ax.set_ylabel("Avarage Loss", color="C0")
+    ax.tick_params(axis='x', colors="C0")
+    ax.tick_params(axis='y', colors="C0")
+
+    plt.savefig(filename)
+
 
 class RepeatActionAndMaxFrame(gym.Wrapper):
     def __init__(self, env=None, repeat=4, clip_reward=False, no_ops=0,
