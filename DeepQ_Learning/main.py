@@ -11,7 +11,10 @@ render = True
 n_games = 500
 ######################
 
+plot = 'plots/atari.png'
+plot_loss = 'plots/atari_loss.png'
 env_name = 'PongNoFrameskip-v4'
+
 env = make_env(env_name)
 best_score = -np.inf
 
@@ -23,13 +26,10 @@ device = agent.get_device()
 
 print("Device is ", device)
 
-plot = 'plots/atari.png'
-plot_loss = 'plots/atari_loss.png'
-
 if load_checkpoint:
     agent.load_model()
 
-scores, eps_history, steps_history, game, loss = [], [], [], [], []
+scores, eps_history, steps_history, game, loss, times = [], [], [], [], [], []
 n_steps = 0
 time = 0
 
@@ -39,10 +39,16 @@ for i in range(n_games):
     obs = env.reset()
 
     while not done:
+        # Choose action while according time
+        time = t.time()
         action = agent.choice_action(obs)
+        time = (t.time() - time)
+        times.append(time)
+
         obs_, reward, done, info = env.step(action)
         score += reward
 
+        # Train while accoring time
         if train:
             agent.store_translition(obs, obs_, action, reward, int(done))
             time = t.time()
@@ -56,6 +62,7 @@ for i in range(n_games):
         obs = obs_
 
     avg_score = np.mean(scores[-100:])
+    avg_decision_time = np.mean(times[-100:])
     avg_loss = agent.get_avg_loss()
 
     if avg_score > best_score:
@@ -81,6 +88,7 @@ for i in range(n_games):
     print("Avarage loss: ", avg_loss)
     print("\nTraining device: ", device)
     print("Train took: ", time, " secs")
+    print("Avarage decision time: ", avg_decision_time, " secs")
     print("-----------------")
 
 print("Similation Done")
