@@ -5,7 +5,7 @@ from params import TrainConfig as config
 from agent import *
 
 
-load = Truefrom params import TrainConfig as tg
+load = False
 save = True
 
 env = Environment()

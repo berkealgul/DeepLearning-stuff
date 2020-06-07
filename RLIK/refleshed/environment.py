@@ -1,6 +1,9 @@
 import pygame as py
+import copy
 import sys
 import math
+import random
+import numpy as np
 from params import *
 
 
@@ -26,8 +29,8 @@ class Environment:
         return state
 
     def set_goal(self):
-        x = self.pivot[0] + random.randint(-120, 120)
-        y = self.pivot[1] + random.randint(-120, 120)
+        x = self.arm.pivot[0] + random.randint(-120, 120)
+        y = self.arm.pivot[1] + random.randint(-120, 120)
         self.goal.center = (x, y)
 
     """
@@ -43,8 +46,7 @@ class Environment:
      - done: indicates is similation done. if it is done the
      the value is 1, otherwise 0
     """
-    def step(self, action):
-        a *= self.dt
+    def step(self, a):
         self.arm.update(a)
 
         reward, done = self.get_reward()
