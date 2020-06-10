@@ -15,7 +15,7 @@ plot = 'plots/atari.png'
 plot_loss = 'plots/atari_loss.png'
 env_name = 'PongNoFrameskip-v4'
 
-env = make_env(env_name)
+env = make_env(env_name, no_ops=30, clip_rewards=True)
 best_score = -np.inf
 
 agent = Agent(lr=0.001, gamma=0.99, epsilon=1.0, env_name=env_name,

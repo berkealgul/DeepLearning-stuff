@@ -8,7 +8,8 @@ import numpy as np
 
 class Agent:
 	def __init__(self, lr, gamma, epsilon, env_name, in_dims, n_actions, batch_size, mem_size,
-	 			 hid_dims=512, eps_min=0.01, eps_dec=5e-7, replace=1000 ,chkp_dir='saves/'):
+	 			 hid_dims=512, eps_min=0.01, eps_dec=5e-7, replace=1000 ,chkp_dir='saves/',
+				 momentum=0.95):
 		self.gamma = gamma
 		self.epsilon = epsilon
 		self.eps_dec = eps_dec
@@ -20,8 +21,8 @@ class Agent:
 		self.losses = []
 
 		self.memory = ReplayBuffer(mem_size, in_dims, n_actions)
-		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, "Qeval", chkp_dir+env_name)
-		self.q_next = QNetwork(lr, in_dims, hid_dims, n_actions, "Qnext", chkp_dir+env_name)
+		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, momentum, "Qeval", chkp_dir+env_name)
+		self.q_next = QNetwork(lr, in_dims, hid_dims, n_actions, momentum, "Qnext", chkp_dir+env_name)
 
 
 	def choice_action(self, observation):
@@ -108,7 +109,7 @@ class Agent:
 
 
 class QNetwork(nn.Module):
-	def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir):
+	def __init__(self, lr, in_dims, hid_dims, n_actions, momentum, name, chkp_dir):
 		super(QNetwork, self).__init__()
 		self.chpk_file = os.path.join(chkp_dir, name)
 
@@ -122,7 +123,7 @@ class QNetwork(nn.Module):
 		self.fc2 = nn.Linear(hid_dims, n_actions)
 
 		self.loss = nn.MSELoss()
-		self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
+		self.optimizer = optim.RMSprop(self.parameters(), lr=lr, momentum=momentum)
 		self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
 		self.to(self.device)
 
@@ -152,7 +153,7 @@ class QNetwork(nn.Module):
 
 	def load_checkpoint(self):
 		print("LOADING...")
-		self.load_state_dict(T.load(self.chpk_file))
+		self.load_state_dict(T.load(self.chpk_file, map_location=self.device))
 
 
 class ReplayBuffer:
