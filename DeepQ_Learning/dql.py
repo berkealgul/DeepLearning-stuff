@@ -7,8 +7,9 @@ import numpy as np
 
 
 class Agent:
-	def __init__(self, lr, gamma, epsilon, env_name, in_dims, n_actions, batch_size, mem_size,
-	 			 hid_dims=512, eps_min=0.01, eps_dec=5e-7, replace=1000 ,chkp_dir='saves/'):
+	def __init__(self, lr, gamma, epsilon, env_name, in_dims, n_actions, batch_size,
+				mem_size, hid_dims=512, eps_min=0.01, eps_dec=5e-7, replace=1000,
+				momentum=0.95, chkp_dir='saves/'):
 		self.gamma = gamma
 		self.epsilon = epsilon
 		self.eps_dec = eps_dec
@@ -20,8 +21,12 @@ class Agent:
 		self.losses = []
 
 		self.memory = ReplayBuffer(mem_size, in_dims, n_actions)
-		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, "Qeval", chkp_dir+env_name)
-		self.q_next = QNetwork(lr, in_dims, hid_dims, n_actions, "Qnext", chkp_dir+env_name)
+		self.q_eval = QNetwork(lr, in_dims, hid_dims, n_actions, "Qeval",
+								chkp_dir+env_name, momentum)
+		self.q_next = QNetwork(lr, in_dims, hid_dims, n_actions, "Qnext",
+								chkp_dir+env_name, momentum)
+
+		print("Network device is: ", self.q_eval.device)
 
 
 	def choice_action(self, observation):
@@ -103,12 +108,10 @@ class Agent:
 		self.losses.clear()
 		return avg_loss
 
-	def get_device(self):
-		return self.q_eval.device
-
 
 class QNetwork(nn.Module):
-	def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir):
+	def __init__(self, lr, in_dims, hid_dims, n_actions, name, chkp_dir,
+				momentum):
 		super(QNetwork, self).__init__()
 		self.chpk_file = os.path.join(chkp_dir, name)
 
@@ -122,8 +125,9 @@ class QNetwork(nn.Module):
 		self.fc2 = nn.Linear(hid_dims, n_actions)
 
 		self.loss = nn.MSELoss()
-		self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
-		self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
+		self.optimizer = optim.RMSprop(self.parameters(), lr=lr,
+						momentum=momentum)
+		self.device = T.device("cudo:0" if T.cuda.is_available() else "cpu")
 		self.to(self.device)
 
 
