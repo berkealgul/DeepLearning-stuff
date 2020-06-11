@@ -13,6 +13,7 @@ class Environment:
         self.w = 640
         self.h = 480
         self.fps = 30
+        self.speed = 30
         self.screen = py.display.set_mode((self.w, self.h))
         self.clock = py.time.Clock()
         self.arm = Arm((int(self.w/2), int(self.h/2)))
@@ -44,7 +45,7 @@ class Environment:
      the value is 1, otherwise 0
     """
     def step(self, action):
-        self.arm.update(action.detach().numpy())
+        self.arm.update(action.detach().numpy() * self.speed)
         reward, done = self.get_reward()
         state = self.get_state()
 
@@ -180,7 +181,7 @@ class Environment:
 
             dA = 0
             for i in range(len(self.arm.starting_angles)):
-                an = self.arm.starting_angles[i] -self.arm.joint_angles[i]
+                an = math.radians(self.arm.starting_angles[i] - self.arm.joint_angles[i])
                 dA += (an * an)
             dA = math.sqrt(dA)
 
@@ -250,7 +251,7 @@ class Arm:
     def __update_axis_angles(self, action_vector):
         for i in range(self.joint_count):
             self.joint_angles[i] += action_vector[i]
-            self.joint_angles[i] = self.joint_angles[i]
+            self.joint_angles[i] = self.joint_angles[i] % 360
 
     def __update_axis_pivots(self):
         for i in range(self.joint_count):

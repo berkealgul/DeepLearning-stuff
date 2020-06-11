@@ -19,15 +19,14 @@ class Dimensions:
 
 # Hyperparameters for simulation
 class TrainConfig:
-    load          = True
     steps_each_ep = 150
     max_episodes  = 10000
     lr            = 0.001
     gamma         = 0.99
     inputs        = 7
     outputs       = 3
-    hidden1       = 100
-    hidden2       = 75
+    hidden1       = 200
+    hidden2       = 150
     tau           = 0.001
     batch_size    = 64
-    memory_size   = 3200
+    memory_size   = 10000

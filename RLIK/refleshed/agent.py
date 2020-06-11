@@ -45,6 +45,7 @@ class Agent():
             qVal_t.append(r[i] + self.gamma*qvt[i])
 
         qVal_t = T.stack(qVal_t)
+
         qVal = self.critic.forward(s, a)
 
         self.critic.train()
