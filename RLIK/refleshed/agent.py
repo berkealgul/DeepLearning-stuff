@@ -1,6 +1,6 @@
+import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-import torch as T
 import numpy as np
 import os
 from params import TrainConfig as tg
@@ -10,14 +10,15 @@ class Agent():
     def __init__(self, gamma=tg.gamma, tau=tg.tau):
         self.actor = ActorNetwork()
         self.critic = CriticNetwork()
-        self._actor = ActorNetwork()
-        self._critic = CriticNetwork()
+        self.target_actor = ActorNetwork()
+        self.target_critic = CriticNetwork()
         self.replayBuffer = ReplayBuffer()
         self.gamma = gamma
         self.tau = tau
 
     def predict_action(self, state):
         self.actor.eval()
+        state = T.FloatTensor(state)
         action = self.actor(state)
         return action
 
@@ -25,19 +26,19 @@ class Agent():
         if self.replayBuffer.mem_center < tg.batch_size:
             return
 
-        s, _s, a, r, done = self.replayBuffer.get_all_buffer()
+        s, _s, a, r, done = self.replayBuffer.sample_buffer(tg.batch_size)
 
-        s = T.from_numpy(s).float()
-        _s = T.from_numpy(_s).float()
-        r = T.from_numpy(r).float()
-        a = T.from_numpy(a).float()
+        s = T.FloatTensor(s)
+        _s = T.FloatTensor(_s)
+        a = T.FloatTensor(a)
+        r = T.FloatTensor(r)
 
-        self._actor.eval()
-        self._critic.eval()
+        self.target_actor.eval()
+        self.target_critic.eval()
         self.critic.eval()
 
-        aVal = self._actor.forward(_s)
-        qvt = self._critic.forward(_s, aVal)
+        aVal = self.target_actor.forward(_s)
+        qvt = self.target_critic.forward(_s, aVal)
 
         qVal_t = []
         for i in range(len(r)):
@@ -50,17 +51,15 @@ class Agent():
 
         self.critic.optimizer.zero_grad()
         critic_loss = F.mse_loss(qVal_t, qVal)
-        critic_loss.to(self.critic.device)
-        critic_loss.backward(retain_graph=True)
+        critic_loss.backward()
         self.critic.optimizer.step()
 
         self.critic.eval()
         mu = self.actor.forward(s)
         self.actor.train()
-        actor_loss = self.critic.forward(s, mu)
-        actor_loss.to(self.actor.device)
+        actor_loss = self.critic.forward(s, mu)# * mu
         actor_loss = T.mean(actor_loss)
-        actor_loss.backward(retain_graph=True)
+        actor_loss.backward()
         self.actor.optimizer.step()
 
         print("loss  a " + str(actor_loss.item()) + " c " + str(critic_loss.item()))
@@ -73,45 +72,47 @@ class Agent():
 
         actor_params = self.actor.named_parameters()
         critic_params = self.critic.named_parameters()
-        _actor_params = self._actor.named_parameters()
-        _critic_params = self._critic.named_parameters()
+        target_actor_params = self.target_actor.named_parameters()
+        target_critic_params = self.target_critic.named_parameters()
 
         actor_dict = dict(actor_params)
-        _actor_dict = dict(_actor_params)
+        target_actor_dict = dict(target_actor_params)
         critic_dict = dict(critic_params)
-        _critic_dict = dict(_critic_params)
+        target_critic_dict = dict(target_critic_params)
 
-        for name in _actor_dict:
-            _actor_dict[name] = tau*actor_dict[name].clone() + \
-                (1-tau)*_actor_dict[name].clone()
+        for name in target_actor_dict:
+            target_actor_dict[name] = tau*actor_dict[name].clone() + \
+                (1-tau)*target_actor_dict[name].clone()
 
-        for name in _critic_dict:
-            _critic_dict[name] = tau*critic_dict[name].clone() + \
-                (1-tau)*_critic_dict[name].clone()
+        for name in target_critic_dict:
+            target_critic_dict[name] = tau*critic_dict[name].clone() + \
+                (1-tau)*target_critic_dict[name].clone()
 
     def save_model(self, file="saves"):
         print("-------------SAVING----------------")
         T.save({'state_dict': self.critic.state_dict()}, os.path.join(file, "c.pt"))
-        T.save({'state_dict': self._critic.state_dict()},os.path.join(file, "ct.pt"))
+        T.save({'state_dict': self.target_critic.state_dict()},os.path.join(file, "ct.pt"))
         T.save({'state_dict': self.actor.state_dict()},os.path.join(file, "a"))
-        T.save({'state_dict': self._actor.state_dict()},os.path.join(file, "at.pt"))
+        T.save({'state_dict': self.target_actor.state_dict()},os.path.join(file, "at.pt"))
 
     def load_model(self, file="saves"):
-        print("-------------LOADING----------------")
-        self.critic.load_state_dict(T.load(os.path.join(file, "c.pt"))['state_dict'])
-        self._critic.load_state_dict(T.load(os.path.join(file, "ct.pt"))['state_dict'])
-        self.actor.load_state_dict(T.load(os.path.join(file, "a"))['state_dict'])
-        self._actor.load_state_dict(T.load(os.path.join(file, "at.pt"))['state_dict'])
-
+        try:
+            print("-------------LOADING----------------")
+            self.critic.load_state_dict(T.load(os.path.join(file, "c.pt"))['state_dict'])
+            self.target_critic.load_state_dict(T.load(os.path.join(file, "ct.pt"))['state_dict'])
+            self.actor.load_state_dict(T.load(os.path.join(file, "a"))['state_dict'])
+            self.target_actor.load_state_dict(T.load(os.path.join(file, "at.pt"))['state_dict'])
+        except:
+            print("Load Failed")
 
 class ReplayBuffer:
 	def __init__(self, mem_size=tg.memory_size, input_shape=(1,tg.inputs),
-                n_actions=tg.outputs):
+                n_actions=(1,tg.outputs)):
 		self.mem_size = mem_size
 		self.mem_center = 0
 		self.state_memory = np.zeros((self.mem_size, *input_shape),dtype=np.float32)
 		self.new_state_memory = np.zeros((self.mem_size, *input_shape),dtype=np.float32)
-		self.action_memory = np.zeros(self.mem_size, dtype=np.int64)
+		self.action_memory = np.zeros((self.mem_size, *n_actions), dtype=np.int64)
 		self.reward_memory = np.zeros(self.mem_size,dtype=np.float32)
 		self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool)
 
@@ -138,8 +139,7 @@ class ReplayBuffer:
 
 
 class ActorNetwork(nn.Module):
-    def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1,
-                fc2_dims=tg.hidden2, out_dims=tg.outputs):
+    def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
         super(ActorNetwork, self).__init__()
         self.fc1 = nn.Linear(in_dims,fc1_dims)
         self.bn1 = nn.LayerNorm(fc1_dims)
@@ -147,8 +147,6 @@ class ActorNetwork(nn.Module):
         self.bn2 = nn.LayerNorm(fc2_dims)
         self.out = nn.Linear(fc2_dims, out_dims)
         self.optimizer = T.optim.Adam(self.parameters(), lr=lr)
-        self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
-        self.to(self.device)
 
     def forward(self, state):
         a = self.fc1(state)
@@ -165,8 +163,7 @@ class ActorNetwork(nn.Module):
 
 
 class CriticNetwork(nn.Module):
-    def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1,
-                fc2_dims=tg.hidden2, out_dims=tg.outputs):
+    def __init__(self, lr=tg.lr, in_dims=tg.inputs, fc1_dims=tg.hidden1, fc2_dims=tg.hidden2, out_dims=tg.outputs):
         super(CriticNetwork, self).__init__()
         self.fc1 = nn.Linear(in_dims,fc1_dims)
         self.bn1 = nn.LayerNorm(fc1_dims)
@@ -175,8 +172,6 @@ class CriticNetwork(nn.Module):
         self.action_value = nn.Linear(out_dims, fc2_dims)
         self.q  = nn.Linear(fc2_dims, 1)
         self.optimizer = T.optim.Adam(self.parameters(), lr=lr)
-        self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
-        self.to(self.device)
 
     def forward(self, state, action):
         q = self.fc1(state)
