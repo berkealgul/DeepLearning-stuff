@@ -89,6 +89,9 @@ class Agent():
             target_critic_dict[name] = tau*critic_dict[name].clone() + \
                 (1-tau)*target_critic_dict[name].clone()
 
+        self.target_actor.load_state_dict(target_actor_dict)
+        self.target_critic.load_state_dict(target_critic_dict)
+
     def save_model(self, file="saves"):
         print("-------------SAVING----------------")
         T.save({'state_dict': self.critic.state_dict()}, os.path.join(file, "c.pt"))
