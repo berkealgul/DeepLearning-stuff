@@ -3,17 +3,24 @@ import numpy as np
 from agent import Agent
 from utils import plot_learning_curve
 
-env = gym.make("LunarLanderContinuous-v2")
-filename = "plots/LunarLanderContinuous-v2.png"
+env_name = "BipedalWalker-v3"
+filename = "plots/"+env_name+".png"
+load = True
 
+env = gym.make(env_name)
 agent = Agent(alpha=0.001, beta=0.001, input_shape=env.observation_space.shape,
-				n_actions=env.action_space.shape[0], tau=0.005,  env=env)
+				n_actions=env.action_space.shape[0], tau=0.005,  env=env,
+				name=env_name)
 
 best_score = env.reward_range[0]
 score_history = []
 n_games = 10
 
-agent.load()
+if load:
+	try:
+		agent.load()
+	except:
+		print("Error while loading...")
 
 for i in range(n_games):
 	obs = env.reset()

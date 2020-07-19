@@ -7,9 +7,10 @@ import os
 
 
 class Agent:
-	def __init__(self, alpha, beta, input_shape, n_actions, tau,  env, gamma=0.99,
-				update_actor_interval=2, layer_1_dims=400, layer_2_dims=300,
-				noise=0.1, mem_size=1000000, batch_size=100, warmup=1000):
+	def __init__(self, alpha, beta, input_shape, n_actions, tau,  env, name,
+				gamma=0.99, update_actor_interval=2, layer_1_dims=400,
+				layer_2_dims=300, noise=0.1, mem_size=1000000, batch_size=100,
+			 	warmup=1000):
 
 		# max and min actions for noise
 		self.max_action = env.action_space.high
@@ -27,13 +28,19 @@ class Agent:
 		self.learn_step = 0
 		self.time_step = 0
 
-		self.critic_1 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape, n_actions, "critic_1", "saves/")
-		self.critic_2 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape, n_actions, "critic_2", "saves/")
-		self.actor = ActorNetwork(alpha, layer_1_dims, layer_2_dims, input_shape, n_actions, "actor", "saves/")
+		self.critic_1 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape,
+										n_actions, "critic_1", "saves/"+name)
+		self.critic_2 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape,
+										n_actions, "critic_2", "saves/"+name)
+		self.actor = ActorNetwork(alpha, layer_1_dims, layer_2_dims, input_shape,
+										n_actions, "actor", "saves/"+name)
 
-		self.target_critic_1 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape, n_actions, "target_critic_1", "saves/")
-		self.target_critic_2 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape, n_actions, "target_critic_2", "saves/")
-		self.target_actor = ActorNetwork(alpha, layer_1_dims, layer_2_dims, input_shape, n_actions, "target_actor", "saves/")
+		self.target_critic_1 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape,
+		 								n_actions, "target_critic_1", "saves/"+name)
+		self.target_critic_2 = CriticNetwork(beta, layer_1_dims, layer_2_dims, input_shape,
+										n_actions, "target_critic_2", "saves/"+name)
+		self.target_actor = ActorNetwork(alpha, layer_1_dims, layer_2_dims, input_shape,
+										n_actions, "target_actor", "saves/"+name)
 
 		self.memory = ReplayBuffer(mem_size, input_shape, n_actions)
 
