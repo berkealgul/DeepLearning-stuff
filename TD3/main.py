@@ -22,6 +22,9 @@ if load:
 	except:
 		print("Error while loading...")
 
+device = agent.get_device()
+print("Device is : ", device)
+
 for i in range(n_games):
 	obs = env.reset()
 	done = False

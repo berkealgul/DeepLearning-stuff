@@ -170,6 +170,9 @@ class Agent:
 		self.target_critic_1.load_checkpoint()
 		self.target_critic_2.load_checkpoint()
 
+	def get_device(self):
+		return self.actor.device
+
 
 class ActorNetwork(nn.Module):
 	def __init__(self, lr, fc1_dims, fc2_dims, input_shape, n_actions, name, chkp_dir):
