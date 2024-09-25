@@ -57,10 +57,21 @@ class FCOSPredictionNetwork(nn.Module):
         # at every location in feature map, we shouldn't "lose" any locations.
         ######################################################################
         # Fill these.
-        stem_cls = []
-        stem_box = []
-        # Replace "pass" statement with your code
-        pass
+        def create_stem_layers():
+            stem = []
+            prev_channel = in_channels
+            for i in range(len(stem_channels)):
+                cur_channel = stem_channels[i]
+                conv = nn.Conv2d(prev_channel, cur_channel, kernel_size=3, padding=1)
+                torch.nn.init.normal_(conv.weight, mean=0.0, std=0.01)
+                torch.nn.init.constant_(conv.bias, 0)
+                stem.append(conv)
+                stem.append(nn.ReLU())
+                prev_channel = cur_channel
+            return stem
+
+        stem_cls = create_stem_layers()
+        stem_box = create_stem_layers()
 
         # Wrap the layers defined by student into a `nn.Sequential` module:
         self.stem_cls = nn.Sequential(*stem_cls)
@@ -83,12 +94,10 @@ class FCOSPredictionNetwork(nn.Module):
         ######################################################################
 
         # Replace these lines with your code, keep variable names unchanged.
-        self.pred_cls = None  # Class prediction conv
-        self.pred_box = None  # Box regression conv
-        self.pred_ctr = None  # Centerness conv
+        self.pred_cls = nn.Conv2d(stem_channels[-1], num_classes, kernel_size=3, padding=1)
+        self.pred_box = nn.Conv2d(stem_channels[-1], 4, kernel_size=3, padding=1)
+        self.pred_ctr = nn.Conv2d(stem_channels[-1], 1, kernel_size=3, padding=1)
 
-        # Replace "pass" statement with your code
-        pass
         ######################################################################
         #                           END OF YOUR CODE                         #
         ######################################################################
@@ -135,7 +144,11 @@ class FCOSPredictionNetwork(nn.Module):
         centerness_logits = {}
 
         # Replace "pass" statement with your code
-        pass
+        for level, feats in feats_per_fpn_level.items():
+            class_logits[level] = self.pred_cls(self.stem_cls(feats))
+            stem_box_feats = self.stem_box(feats)
+            boxreg_deltas[level] = self.pred_box(stem_box_feats)
+            centerness_logits = self.pred_ctr(stem_box_feats)
         ######################################################################
         #                           END OF YOUR CODE                         #
         ######################################################################
@@ -267,10 +280,18 @@ def fcos_get_deltas_from_locations(
     ##########################################################################
     # Set this to Tensor of shape (N, 4) giving deltas (left, top, right, bottom)
     # from the locations to GT box edges, normalized by FPN stride.
-    deltas = None
+    N = gt_boxes.shape[0]
+    deltas = torch.zeros(N, 4)
+    deltas[:,0] = (locations[:, 0] - gt_boxes[:, 0]) / stride # left
+    deltas[:,1] = (locations[:, 1] - gt_boxes[:, 1]) / stride # top
+    deltas[:,2] = (gt_boxes[:, 2] - locations[:, 0]) / stride # right
+    deltas[:,3] = (gt_boxes[:, 3] - locations[:, 1]) / stride # bottom
 
+    if gt_boxes.shape[1] == 5:
+        background_mask = gt_boxes[:, 4] == -1
+        deltas[background_mask, :] = -1
     # Replace "pass" statement with your code
-    pass
+    
     ##########################################################################
     #                             END OF YOUR CODE                           #
     ##########################################################################
@@ -312,7 +333,18 @@ def fcos_apply_deltas_to_locations(
     # box. Make sure to clip them to zero.                                   #
     ##########################################################################
     # Replace "pass" statement with your code
-    pass
+    background_mask = deltas[:, 0] == -1
+    applied_deltas = deltas.clone()
+    applied_deltas[background_mask, :] = 0
+    
+    output_boxes = torch.zeros_like(deltas)
+    output_boxes[:, 0] = locations[:, 0] - applied_deltas[:, 0] * stride # x1
+    output_boxes[:, 1] = locations[:, 1] - applied_deltas[:, 1] * stride # y1
+    output_boxes[:, 2] = applied_deltas[:, 2] * stride + locations[:, 0] # x2
+    output_boxes[:, 3] = applied_deltas[:, 3] * stride + locations[:, 1] # y2
+
+    output_boxes[background_mask, 2] *= -1
+    output_boxes[background_mask, 3] *= -1
     ##########################################################################
     #                             END OF YOUR CODE                           #
     ##########################################################################
@@ -340,9 +372,16 @@ def fcos_make_centerness_targets(deltas: torch.Tensor):
     ##########################################################################
     # TODO: Implement the centerness calculation logic.                      #
     ##########################################################################
-    centerness = None
-    # Replace "pass" statement with your code
-    pass
+    N = deltas.shape[0]
+    min_lr = torch.minimum(deltas[:, 0], deltas[:, 2])
+    min_tb = torch.minimum(deltas[:, 1], deltas[:, 3])
+    max_lr = torch.maximum(deltas[:, 0], deltas[:, 2])
+    max_tb = torch.maximum(deltas[:, 1], deltas[:, 3])
+    centerness = torch.sqrt((min_lr * min_tb) / (max_lr * max_tb))
+
+    background_mask = deltas[:, 0] == -1
+    centerness[background_mask] = -1
+
     ##########################################################################
     #                             END OF YOUR CODE                           #
     ##########################################################################
@@ -369,10 +408,9 @@ class FCOS(nn.Module):
         # TODO: Initialize backbone and prediction network using arguments.  #
         ######################################################################
         # Feel free to delete these two lines: (but keep variable names same)
-        self.backbone = None
-        self.pred_net = None
+        self.backbone = DetectorBackboneWithFPN(num_classes)
+        self.pred_net = FCOSPredictionNetwork(num_classes, fpn_channels, stem_channels)
         # Replace "pass" statement with your code
-        pass
         ######################################################################
         #                           END OF YOUR CODE                         #
         ######################################################################
@@ -414,9 +452,9 @@ class FCOS(nn.Module):
         # logits, deltas, and centerness.                                    #
         ######################################################################
         # Feel free to delete this line: (but keep variable names same)
-        pred_cls_logits, pred_boxreg_deltas, pred_ctr_logits = None, None, None
+        fpn_feats = self.backbone(images)
+        pred_cls_logits, pred_boxreg_deltas, pred_ctr_logits = self.pred_net(fpn_feats)
         # Replace "pass" statement with your code
-        pass
 
         ######################################################################
         # TODO: Get absolute co-ordinates `(xc, yc)` for every location in
@@ -426,9 +464,12 @@ class FCOS(nn.Module):
         # call the functions properly.
         ######################################################################
         # Feel free to delete this line: (but keep variable names same)
-        locations_per_fpn_level = None
+        fpn_feats_shapes = {
+            level_name: feat.shape for level_name, feat in fpn_feats.items()
+        }
+        
+        locations_per_fpn_level = get_fpn_location_coords(fpn_feats_shapes, self.backbone.fpn_strides)
         # Replace "pass" statement with your code
-        pass
         ######################################################################
         #                           END OF YOUR CODE                         #
         ######################################################################
