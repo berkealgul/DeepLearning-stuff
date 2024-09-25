@@ -60,7 +60,6 @@ class DetectorBackboneWithFPN(nn.Module):
         # from the backbone network.
         dummy_out = self.backbone(torch.randn(2, 3, 224, 224))
         dummy_out_shapes = [(key, value.shape) for key, value in dummy_out.items()]
-
         print("For dummy input images with shape: (2, 3, 224, 224)")
         for level_name, feature_shape in dummy_out_shapes:
             print(f"Shape of {level_name} features: {feature_shape}")
@@ -81,10 +80,20 @@ class DetectorBackboneWithFPN(nn.Module):
         # This behaves like a Python dict, but makes PyTorch understand that
         # there are trainable weights inside it.
         # Add THREE lateral 1x1 conv and THREE output 3x3 conv layers.
-        self.fpn_params = nn.ModuleDict()
+       # self.fpn_params = nn.ModuleDict()
 
+        c3_channels = dummy_out_shapes[0][1][1]
+        c4_channels = dummy_out_shapes[1][1][1]
+        c5_channels = dummy_out_shapes[2][1][1]
+
+        self.c5_to_literal = torch.nn.Conv2d(c5_channels, self.out_channels, kernel_size=1)
+        self.c4_to_literal = torch.nn.Conv2d(c4_channels, self.out_channels, kernel_size=1)
+        self.c3_to_literal = torch.nn.Conv2d(c3_channels, self.out_channels, kernel_size=1)
+
+        self.literal_to_p5 = torch.nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1)
+        self.literal_to_p4 = torch.nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1)
+        self.literal_to_p3 = torch.nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1)
         # Replace "pass" statement with your code
-        pass
         ######################################################################
         #                            END OF YOUR CODE                        #
         ######################################################################
@@ -109,9 +118,13 @@ class DetectorBackboneWithFPN(nn.Module):
         # (c3, c4, c5) and FPN conv layers created above.                    #
         # HINT: Use `F.interpolate` to upsample FPN features.                #
         ######################################################################
-
         # Replace "pass" statement with your code
-        pass
+        m = self.c5_to_literal(backbone_feats["c5"])
+        fpn_feats["p5"] = self.literal_to_p5(m)
+        m = F.interpolate(m, scale_factor=2) + self.c4_to_literal(backbone_feats["c4"])
+        fpn_feats["p4"] = self.literal_to_p4(m)
+        m = F.interpolate(m, scale_factor=2) + self.c3_to_literal(backbone_feats["c3"])
+        fpn_feats["p3"] = self.literal_to_p3(m)
         ######################################################################
         #                            END OF YOUR CODE                        #
         ######################################################################
@@ -149,7 +162,7 @@ def get_fpn_location_coords(
     location_coords = {
         level_name: None for level_name, _ in shape_per_fpn_level.items()
     }
-
+    
     for level_name, feat_shape in shape_per_fpn_level.items():
         level_stride = strides_per_fpn_level[level_name]
 
@@ -157,7 +170,13 @@ def get_fpn_location_coords(
         # TODO: Implement logic to get location co-ordinates below.          #
         ######################################################################
         # Replace "pass" statement with your code
-        pass
+        b, c, h, w = feat_shape
+        stride = strides_per_fpn_level[level_name]
+        coords = torch.zeros(size=(h*w, 2), dtype=dtype, device=device)
+        coords[:,0] = torch.arange(start=0, end=h*w) % h
+        coords[:,1] = torch.arange(start=0, end=h*w) % w
+        coords = (coords + 0.5) * stride
+        location_coords[level_name] = coords
         ######################################################################
         #                             END OF YOUR CODE                       #
         ######################################################################
